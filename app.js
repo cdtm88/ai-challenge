@@ -772,6 +772,374 @@
     }));
   }
 
+  // ── intake ───────────────────────────────────────────────────────────
+
+  /* Two files, read in the browser. What can be derived without a model is
+     derived here and shown: the coverage numbers, and the three detections
+     that run over the export alone. What needs a model — classifying each
+     finding and scoring it against the anchors — is a two-pass run made
+     offline, because there is no model and no server at view time. The
+     button hands over exactly the input that run expects. */
+
+  var CSV_COLUMNS = ["ticket_id", "workstream", "title", "status", "assignee_role",
+                     "created_date", "status_changed_date", "due_date", "blocked_by"];
+  var CLOSED_STATUSES = ["done", "closed", "resolved", "complete", "completed"];
+  var STALE_DAYS = 10;
+  var STALE_MIN = 3;
+  var GROWTH_MIN_EXCESS = 3;
+
+  var intake = { tickets: null, transcript: null };
+
+  function parseCsvRows(text) {
+    // Quoted fields may contain commas, quotes and newlines, so this walks
+    // the text rather than splitting it.
+    var rows = [], row = [], field = "", quoted = false, i = 0;
+    text = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
+    for (; i < text.length; i++) {
+      var c = text[i];
+      if (quoted) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else quoted = false;
+        } else field += c;
+      } else if (c === '"') quoted = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+      else field += c;
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(function (r) { return r.length > 1 || (r[0] || "").trim(); });
+  }
+
+  function readTickets(text) {
+    var rows = parseCsvRows(text);
+    if (!rows.length) throw new Error("the file is empty");
+    var head = rows[0].map(function (h) { return h.trim().toLowerCase().replace(/\s+/g, "_"); });
+    var missing = CSV_COLUMNS.filter(function (c) { return head.indexOf(c) < 0; });
+    var records = rows.slice(1).map(function (r) {
+      var o = {};
+      head.forEach(function (k, n) { o[k] = (r[n] === undefined ? "" : r[n]).trim(); });
+      return o;
+    }).filter(function (o) { return o.ticket_id; });
+    return { rows: records, columns: head, missing: missing };
+  }
+
+  var TIME_LINE = /^\s*(?:\[)?(\d{1,2}:\d{2}(?::\d{2})?)(?:\])?\s+([^:]{2,48}?)\s*:\s*(.+)$/;
+  var VTT_CUE = /^(\d{1,2}:\d{2}(?::\d{2})?)[.,]?\d*\s*-->/;
+
+  function readTranscript(text, name) {
+    if (/\.json$/i.test(name) || /^\s*\{/.test(text)) {
+      var doc = JSON.parse(text);
+      if (!doc.lines) throw new Error("no lines array");
+      return { doc: doc, format: "json" };
+    }
+    // VTT or speaker-labelled text: keep whatever carries a time and a name.
+    var lines = [], pending = null, n = 0;
+    text.replace(/\r\n?/g, "\n").split("\n").forEach(function (raw) {
+      var cue = VTT_CUE.exec(raw);
+      if (cue) { pending = cue[1]; return; }
+      var m = TIME_LINE.exec(raw);
+      if (m) {
+        lines.push({ line: ++n, timestamp: m[1], speaker: m[2].trim(), text: m[3].trim(), workstream: null });
+        pending = null;
+        return;
+      }
+      var named = /^\s*([^:]{2,48}?)\s*:\s*(.+)$/.exec(raw);
+      if (named && pending) {
+        lines.push({ line: ++n, timestamp: pending, speaker: named[1].trim(), text: named[2].trim(), workstream: null });
+        pending = null;
+      }
+    });
+    if (!lines.length) throw new Error("no speaker-labelled lines with timestamps");
+    return { doc: { lines: lines, airtime_seconds: {}, duration_seconds: null }, format: /\.vtt$/i.test(name) ? "vtt" : "text" };
+  }
+
+  function isClosed(status) {
+    return CLOSED_STATUSES.indexOf(String(status).trim().toLowerCase()) >= 0;
+  }
+
+  function toDate(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || "").trim());
+    return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+
+  function windowEnd() {
+    if (intake.transcript && intake.transcript.doc.date && toDate(intake.transcript.doc.date)) {
+      return toDate(intake.transcript.doc.date);
+    }
+    var latest = null;
+    (intake.tickets ? intake.tickets.rows : []).forEach(function (t) {
+      [t.status_changed_date, t.created_date].forEach(function (d) {
+        var v = toDate(d);
+        if (v !== null && (latest === null || v > latest)) latest = v;
+      });
+    });
+    return latest;
+  }
+
+  /* The same derivations tools/corpus_stats.py runs over the committed
+     corpus, applied to whatever was just dropped in. */
+  function derive() {
+    var end = windowEnd();
+    if (end === null || !intake.tickets) return null;
+    var day = 86400000;
+    var windows = [0, 1, 2].map(function (back) {
+      return { end: end - back * 7 * day, start: end - (back * 7 + 6) * day };
+    });
+
+    var streams = {};
+    function bucket(ws) {
+      if (!streams[ws]) {
+        streams[ws] = { transitions: 0, opened: [0, 0, 0], closed: [0, 0, 0], stale: [], airtime: 0, spoke: false };
+      }
+      return streams[ws];
+    }
+
+    intake.tickets.rows.forEach(function (t) {
+      var ws = t.workstream || "(unlabelled)";
+      var b = bucket(ws);
+      var moved = toDate(t.status_changed_date);
+      var made = toDate(t.created_date);
+      windows.forEach(function (w, n) {
+        if (made !== null && made >= w.start && made <= w.end) b.opened[n] += 1;
+        if (moved !== null && moved >= w.start && moved <= w.end) {
+          if (n === 0) b.transitions += 1;
+          if (isClosed(t.status)) b.closed[n] += 1;
+        }
+      });
+      if (moved !== null && !isClosed(t.status)) {
+        var days = Math.round((end - moved) / day);
+        if (days > STALE_DAYS) b.stale.push({ id: t.ticket_id, days: days });
+      }
+    });
+
+    if (intake.transcript) {
+      var doc = intake.transcript.doc;
+      Object.keys(doc.airtime_seconds || {}).forEach(function (ws) {
+        bucket(ws).airtime = doc.airtime_seconds[ws];
+        bucket(ws).spoke = doc.airtime_seconds[ws] > 0;
+      });
+      (doc.lines || []).forEach(function (l) {
+        if (l.workstream) bucket(l.workstream).spoke = true;
+      });
+    }
+
+    var detections = { staleness: [], growth: [], claimed: [], quiet: [] };
+    Object.keys(streams).forEach(function (ws) {
+      var b = streams[ws];
+      if (b.stale.length >= STALE_MIN) {
+        b.stale.sort(function (x, y) { return y.days - x.days; });
+        detections.staleness.push({ ws: ws, n: b.stale.length, worst: b.stale[0] });
+      }
+      var grew = [0, 1].every(function (n) { return b.opened[n] - b.closed[n] >= GROWTH_MIN_EXCESS; });
+      if (grew) detections.growth.push({ ws: ws, this_week: b.opened[0] + "/" + b.closed[0], last_week: b.opened[1] + "/" + b.closed[1] });
+      if (b.spoke && b.transitions === 0) detections.claimed.push({ ws: ws });
+      if (intake.transcript && (b.airtime < AIRTIME_FLOOR || b.transitions === 0)) {
+        detections.quiet.push({ ws: ws, airtime: b.airtime, transitions: b.transitions });
+      }
+    });
+
+    return { end: end, streams: streams, detections: detections,
+             windowLabel: new Date(windows[0].start).toISOString().slice(0, 10) + " to " +
+                          new Date(end).toISOString().slice(0, 10) };
+  }
+
+  function setSlot(kind, tone, message) {
+    var label = document.querySelector('.drop[data-kind="' + kind + '"]');
+    var state = document.getElementById("state-" + kind);
+    if (!label || !state) return;
+    label.classList.remove("is-ok", "is-warn", "is-bad", "is-over");
+    if (tone) label.classList.add("is-" + tone);
+    state.textContent = message;
+  }
+
+  function line(tone, parts) {
+    return el("p", { class: "read__line" + (tone ? " is-" + tone : "") }, parts);
+  }
+
+  function renderIntake() {
+    var out = clear(document.getElementById("intake-out"));
+    if (!intake.tickets && !intake.transcript) return;
+
+    var checks = el("div", { class: "read__list" });
+
+    if (intake.tickets) {
+      var t = intake.tickets;
+      checks.appendChild(line(t.missing.length ? "bad" : "ok", [
+        el("span", { class: "u-num", text: String(t.rows.length) }),
+        " ticket rows read. " + (t.missing.length
+          ? "Missing required column" + (t.missing.length > 1 ? "s" : "") + ": " + t.missing.join(", ") + "."
+          : "All nine required columns present.")
+      ]));
+    }
+
+    if (intake.transcript) {
+      var d = intake.transcript.doc;
+      var labelled = d.lines.filter(function (l) { return l.speaker && l.timestamp; }).length;
+      checks.appendChild(line(labelled === d.lines.length ? "ok" : "warn", [
+        el("span", { class: "u-num", text: String(d.lines.length) }),
+        " transcript lines read as " + intake.transcript.format + ". " +
+        labelled + " carry a speaker and a timestamp."
+      ]));
+      var air = Object.keys(d.airtime_seconds || {}).length;
+      if (!air) {
+        checks.appendChild(line("warn", [
+          "No per-workstream airtime in the file, so coverage cannot be measured. " +
+          "Add airtime_seconds, or attribute lines to a workstream."
+        ]));
+      } else if (d.duration_seconds) {
+        var total = Object.keys(d.airtime_seconds).reduce(function (a, k) { return a + d.airtime_seconds[k]; }, 0);
+        checks.appendChild(line(total <= d.duration_seconds ? "ok" : "bad", [
+          "Airtime totals ", el("span", { class: "u-num", text: mmss(total) }),
+          " against a " + mmss(d.duration_seconds) + " meeting."
+        ]));
+      }
+    }
+
+    append(out, [el("h3", { class: "read__head", text: "What the files say" }), checks]);
+
+    var d2 = derive();
+    if (d2) {
+      var found = el("div", { class: "read__list" });
+      var det = d2.detections;
+
+      det.quiet.forEach(function (q) {
+        found.appendChild(line("bad", [
+          wsLabel(q.ws) + " is under the coverage floor — ",
+          el("span", { class: "u-num", text: mmss(q.airtime) }), " of airtime, ",
+          el("span", { class: "u-num", text: String(q.transitions) }),
+          " ticket transitions. Its state is unknown, not green."
+        ]));
+      });
+      det.claimed.forEach(function (c) {
+        found.appendChild(line("warn", [
+          wsLabel(c.ws) + " spoke this week and recorded no ticket movement at all."
+        ]));
+      });
+      det.growth.forEach(function (g) {
+        found.appendChild(line("warn", [
+          wsLabel(g.ws) + " opened more than it closed two weeks running — ",
+          el("span", { class: "u-num", text: g.last_week }), " then ",
+          el("span", { class: "u-num", text: g.this_week }), " opened against closed."
+        ]));
+      });
+      det.staleness.forEach(function (st) {
+        found.appendChild(line("warn", [
+          wsLabel(st.ws) + " has ", el("span", { class: "u-num", text: String(st.n) }),
+          " tickets with no transition in over " + STALE_DAYS + " days, the oldest ",
+          el("span", { class: "u-num", text: st.worst.id }), " at ",
+          el("span", { class: "u-num", text: String(st.worst.days) }), " days."
+        ]));
+      });
+
+      if (!found.childNodes.length) {
+        found.appendChild(line("ok", ["Nothing the export alone can see. The three detections found no material signal in " + d2.windowLabel + "."]));
+      }
+
+      append(out, [
+        el("h3", { class: "read__head", text: "Found without a model, from " + d2.windowLabel }),
+        found
+      ]);
+    }
+
+    var ready = intake.tickets && !intake.tickets.missing.length && intake.transcript;
+    var run = el("button", { type: "button", class: "btn", id: "intake-run", disabled: !ready },
+                 "Download the run input");
+    run.addEventListener("click", downloadBundle);
+
+    var reset = el("button", { type: "button", class: "btn btn--quiet" }, "Clear");
+    reset.addEventListener("click", function () {
+      intake = { tickets: null, transcript: null };
+      ["tickets", "transcript"].forEach(function (k) {
+        var input = document.getElementById("in-" + k);
+        if (input) input.value = "";
+        setSlot(k, null, "Waiting for a file");
+      });
+      renderIntake();
+    });
+
+    append(out, [
+      el("p", { class: "read__note" },
+        ready
+          ? ["Classifying each finding and scoring it against the anchors needs a model, and there is none at view time — no key, no server, no call. " +
+             "The two prompt passes run offline against this file, and their output is committed as the week's register."]
+          : ["Add both files to prepare a run. What is shown above needed no model; classification and scoring do."]),
+      el("div", { class: "read__actions" }, [run, reset])
+    ]);
+  }
+
+  function downloadBundle() {
+    var d = derive();
+    var payload = {
+      generated: "Risk Radar intake, in-browser",
+      window: d ? d.windowLabel : null,
+      transcript: intake.transcript ? intake.transcript.doc : null,
+      tickets: intake.tickets ? intake.tickets.rows : [],
+      derived: d ? { by_workstream: d.streams, detections: d.detections } : null,
+      next: "Run prompts/1-extract-classify.md then prompts/2-score.md over this file, then score.py."
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "risk-radar-run-input.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function takeFile(kind, file) {
+    if (!file) return;
+    setSlot(kind, null, "Reading " + file.name + "…");
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        if (kind === "tickets") {
+          intake.tickets = readTickets(String(reader.result));
+          setSlot(kind, intake.tickets.missing.length ? "bad" : "ok",
+                  file.name + " — " + intake.tickets.rows.length + " rows");
+        } else {
+          intake.transcript = readTranscript(String(reader.result), file.name);
+          setSlot(kind, "ok", file.name + " — " + intake.transcript.doc.lines.length + " lines");
+        }
+      } catch (e) {
+        if (kind === "tickets") intake.tickets = null; else intake.transcript = null;
+        setSlot(kind, "bad", file.name + " — could not be read: " + e.message);
+      }
+      renderIntake();
+    };
+    reader.onerror = function () { setSlot(kind, "bad", "could not be read"); };
+    reader.readAsText(file);
+  }
+
+  function bindIntake() {
+    ["tickets", "transcript"].forEach(function (kind) {
+      var label = document.querySelector('.drop[data-kind="' + kind + '"]');
+      var input = document.getElementById("in-" + kind);
+      if (!label || !input) return;
+
+      input.addEventListener("change", function () { takeFile(kind, input.files[0]); });
+
+      ["dragenter", "dragover"].forEach(function (ev) {
+        label.addEventListener(ev, function (e) {
+          e.preventDefault();
+          label.classList.add("is-over");
+        });
+      });
+      ["dragleave", "dragend"].forEach(function (ev) {
+        label.addEventListener(ev, function () { label.classList.remove("is-over"); });
+      });
+      label.addEventListener("drop", function (e) {
+        e.preventDefault();
+        label.classList.remove("is-over");
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          takeFile(kind, e.dataTransfer.files[0]);
+        }
+      });
+    });
+  }
+
   // ── delegation and hydration ─────────────────────────────────────────
 
   /* Every control is reached by delegation, so the same handlers drive markup
@@ -893,6 +1261,7 @@
 
   function start() {
     bindControls();
+    bindIntake();
     var week = weekFromHash() || staticWeek() || 3;
     if (staticWeek() === week) {
       currentWeek = week;

@@ -106,6 +106,96 @@ button { font: inherit; color: inherit; background: none; border: 0; }
   color: var(--paper);
 }
 
+/* ── intake ─────────────────────────────────────────────────────────── */
+
+/* A working surface, so it needs edges the register does not: a drop target
+   has to look like one. Still hairlines, still square, still no fill. */
+.intake {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.intake__head { display: grid; gap: 6px; min-width: 0; }
+.intake__title {
+  font: 600 12.5px/1.3 var(--font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.intake__lede { font: 13.5px/1.55 var(--font-label); color: var(--ink-2); max-width: 62ch; }
+
+.intake__slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+.drop {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-height: 96px;
+  padding: 14px 16px;
+  border: 1px dashed var(--rule-firm);
+  background: var(--paper);
+  cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
+}
+.drop:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+.drop.is-over { border-color: var(--ink); border-style: solid; background: var(--sunk); }
+.drop.is-ok { border-style: solid; border-color: var(--green); }
+.drop.is-warn { border-style: solid; border-color: var(--amber); }
+.drop.is-bad { border-style: solid; border-color: var(--red); }
+/* Visible to a keyboard and to assistive tech, invisible to layout: the
+   whole label is the target. */
+.drop__input {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+.drop__name { font: 15px/1.35 var(--font-text); }
+.drop__hint { font: 12.5px/1.4 var(--font-label); color: var(--ink-2); }
+.drop__state { font: 12.5px/1.4 var(--font-label); color: var(--ink-2); margin-top: 4px; }
+.drop.is-ok .drop__state { color: var(--green); }
+.drop.is-warn .drop__state { color: var(--amber); }
+.drop.is-bad .drop__state { color: var(--red); }
+
+.intake__out:not(:empty) {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: var(--sunk);
+  min-width: 0;
+}
+.read__head {
+  font: 600 12.5px/1.3 var(--font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.read__list { display: grid; gap: 5px; min-width: 0; }
+.read__line { font: 13.5px/1.5 var(--font-label); min-width: 0; }
+.read__line.is-bad { color: var(--red); }
+.read__line.is-warn { color: var(--amber); }
+.read__line.is-ok { color: var(--green); }
+.read__line .u-num { font-size: 13px; }
+.read__note { font: 13px/1.55 var(--font-label); color: var(--ink-2); max-width: 62ch; }
+.read__actions { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font: 13px/1 var(--font-label);
+  cursor: pointer;
+}
+.btn--quiet { background: var(--paper); color: var(--ink); border-color: var(--rule-firm); }
+.btn[disabled] { opacity: 0.45; cursor: default; }
+
 /* ── the alert line ─────────────────────────────────────────────────── */
 
 .alert:not(:empty) {

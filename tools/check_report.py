@@ -332,7 +332,11 @@ def greyscale_check(page, base):
     page.set_viewport_size({"width": 1180, "height": 1000})
     page.goto(base + "#week-3", wait_until="load")
     page.wait_for_selector(".row", timeout=15000)
-    page.add_style_tag(content="html { filter: grayscale(1) !important; }")
+    # Emulate achromatopsia rather than injecting a filter: it is the real
+    # condition being designed for, and it does not need an inline style,
+    # which the production Content-Security-Policy correctly refuses.
+    cdp = page.context.new_cdp_session(page)
+    cdp.send("Emulation.setEmulatedVisionDeficiency", {"type": "achromatopsia"})
     words = page.evaluate("""
     () => {
       const t = document.body.innerText;

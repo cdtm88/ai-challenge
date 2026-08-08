@@ -714,9 +714,10 @@
     article.appendChild(scoreBlock(item));
     article.appendChild(metaBlock(item));
 
+    // An item with no transcript source simply leaves the quote grid area
+    // empty; the area collapses on its own and needs no placeholder.
     var q = quoteBlock(item);
     if (q) article.appendChild(q);
-    else article.appendChild(el("div", { class: "row__quote", style: "border:0;padding:0" }));
 
     var details = el("details", { class: "row__evidence" }, [
       el("summary", { text: "Evidence & arithmetic" })

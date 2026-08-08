@@ -401,6 +401,20 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .adj__note { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; max-width: 66ch; }
 .adj__note del { color: var(--ink-3); }
 
+.adj__form { flex: 1 1 100%; }
+.adj__label { display: block; margin-bottom: var(--s2); color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; max-width: 66ch; }
+.adj__row { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: stretch; }
+.adj__input {
+  flex: 1 1 240px; min-width: 0; min-height: 44px;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-label);
+  font-size: 14px;
+}
+.adj__input::placeholder { color: var(--ink-3); }
+
 /* ── omissions ──────────────────────────────────────────────────────── */
 
 .omissions { margin-top: var(--s7); padding-top: var(--s4); border-top: 3px double var(--ink); }

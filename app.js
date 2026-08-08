@@ -148,32 +148,20 @@
     }
   }
 
-  function acceptanceKey(week, id) { return week + ":" + id; }
+  function acceptanceKey(week, item) { return week + ":" + item.id; }
 
   function acceptanceFor(week, item) {
-    var override = acceptance[acceptanceKey(week, item.id)];
-    if (override) return override;
-    return item.acceptance;
+    return acceptance[acceptanceKey(week, item)] || item.acceptance;
   }
 
-  function setAcceptance(week, item, state) {
-    var key = acceptanceKey(week, item.id);
-    if (state === "amended") {
-      var note = window.prompt(
-        "Amendment note. The run's own wording is kept and struck through; it is never erased.",
-        (acceptance[key] && acceptance[key].note) || ""
-      );
-      if (note === null) return false;
-      acceptance[key] = { state: "amended", by: "This session", at: null, note: note || "Amended without a note." };
-    } else if (state === "rejected") {
-      var reason = window.prompt("Reason for rejection. The row stays on the record with the reason attached.", "");
-      if (reason === null) return false;
-      acceptance[key] = { state: "rejected", by: "This session", at: null, note: reason || "Rejected without a stated reason." };
-    } else {
-      acceptance[key] = { state: state, by: "This session", at: null, note: null };
-    }
+  function setAcceptance(week, item, state, note) {
+    acceptance[acceptanceKey(week, item)] = {
+      state: state,
+      by: "This session",
+      at: null,
+      note: note || null
+    };
     saveAcceptance();
-    return true;
   }
 
   // ── chips (the complete vocabulary; five is the ceiling per row) ─────
@@ -616,16 +604,27 @@
     if (acc.carried_from_week) detail += " · carried from week " + acc.carried_from_week;
     fs.appendChild(el("span", { class: "adj__state is-" + acc.state, text: word + detail }));
 
+    /* Amending and rejecting each need a written note, captured inline rather
+       than in a modal: a dialog is unavailable in a sandboxed frame, and the
+       note belongs beside the row it changes. */
+    var noteForm = el("div", { class: "adj__form", hidden: true });
+
     var buttons = el("div", { class: "adj__buttons" });
     [["accepted", "Accept"], ["amended", "Amend"], ["rejected", "Reject"]].forEach(function (pair) {
+      var state = pair[0];
       var btn = el("button", {
         type: "button",
         class: "adj__btn",
-        "aria-pressed": acc.state === pair[0] ? "true" : "false",
+        "aria-pressed": acc.state === state ? "true" : "false",
         text: pair[1]
       });
       btn.addEventListener("click", function () {
-        if (setAcceptance(week, item, pair[0])) rerender();
+        if (state === "accepted") {
+          setAcceptance(week, item, state, null);
+          rerender();
+          return;
+        }
+        openNoteForm(noteForm, state, item, week, acc, rerender);
       });
       buttons.appendChild(btn);
     });
@@ -636,7 +635,49 @@
         acc.state === "amended" ? "Amendment: " : "Reason: ", acc.note
       ]));
     }
+    fs.appendChild(noteForm);
     return fs;
+  }
+
+  function openNoteForm(host, state, item, week, acc, rerender) {
+    clear(host);
+    host.hidden = false;
+
+    var id = "note-" + state + "-" + item.id;
+    var label = state === "amended"
+      ? "Amendment. The run's own wording is kept and struck through; it is never erased."
+      : "Reason for rejection. The row stays on the record with the reason attached.";
+
+    var input = el("input", {
+      type: "text",
+      id: id,
+      class: "adj__input",
+      value: (acc.note && acc.state === state) ? acc.note : "",
+      placeholder: state === "amended" ? "What you changed, and why" : "Why this is not a register item"
+    });
+
+    function commit() {
+      var text = input.value.trim();
+      setAcceptance(week, item, state, text ||
+        (state === "amended" ? "Amended without a note." : "Rejected without a stated reason."));
+      rerender();
+    }
+
+    var save = el("button", { type: "button", class: "adj__btn", text: "Save" });
+    save.addEventListener("click", commit);
+    var cancel = el("button", { type: "button", class: "adj__btn", text: "Cancel" });
+    cancel.addEventListener("click", function () { host.hidden = true; clear(host); });
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); commit(); }
+      if (e.key === "Escape") { host.hidden = true; clear(host); }
+    });
+
+    append(host, [
+      el("label", { class: "adj__label", "for": id, text: label }),
+      el("div", { class: "adj__row" }, [input, save, cancel])
+    ]);
+    input.focus();
   }
 
   // ── row ──────────────────────────────────────────────────────────────

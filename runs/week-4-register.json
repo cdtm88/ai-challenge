@@ -1,0 +1,2157 @@
+{
+  "week": 4,
+  "date": "2026-08-03",
+  "programme": "Programme Meridian",
+  "pass": "2-score",
+  "generated_by": "two-pass run: prompts/1-extract-classify.md then prompts/2-score.md, over data/transcripts/week-4.json, data/tickets.csv and data/board.json, with week 3's accepted register as prior. Totals, ordering and movement written by score.py.",
+  "prior_register": "runs/week-3-register.json",
+  "notes": [
+    "Both assurance gaps closed: adoption attended and data migration gave a full update. Two items held out in week 3 return with evidence.",
+    "The board moved platform, integration and adoption to amber this week. The contradiction raised against integration in weeks 1 to 3 no longer holds; the one raised against reporting does.",
+    "Four weeks is enough to show movement and reclassification. It is not enough to calibrate the 10-day staleness threshold or the scope-growth materiality threshold, both of which remain asserted."
+  ],
+  "coverage": {
+    "meeting_duration_seconds": 2700,
+    "airtime_seconds": {
+      "platform": 540,
+      "integration": 500,
+      "data-migration": 400,
+      "reporting": 480,
+      "test": 430,
+      "adoption": 300
+    },
+    "airtime_total_seconds": 2650,
+    "transitions": {
+      "platform": 1,
+      "integration": 2,
+      "data-migration": 2,
+      "reporting": 4,
+      "test": 2,
+      "adoption": 2
+    },
+    "transitions_total": 13,
+    "opened": {
+      "platform": 0,
+      "integration": 1,
+      "data-migration": 1,
+      "reporting": 4,
+      "test": 1,
+      "adoption": 2
+    },
+    "closed": {
+      "platform": 0,
+      "integration": 0,
+      "data-migration": 0,
+      "reporting": 0,
+      "test": 0,
+      "adoption": 0
+    },
+    "workstreams_reporting": 6,
+    "workstreams_total": 6,
+    "unverified_count": 5,
+    "board": {
+      "platform": "amber",
+      "integration": "amber",
+      "data-migration": "green",
+      "reporting": "green",
+      "test": "amber",
+      "adoption": "amber"
+    }
+  },
+  "items": [
+    {
+      "id": "AG-01",
+      "lineage": "adoption-absent",
+      "type": "assurance-gap",
+      "title": "Adoption absent from the review",
+      "statement": "Adoption attended, accounted for the two missed weeks and gave a full update; the coverage gap is closed and the item held out for two weeks returns to the register with evidence.",
+      "workstream": "adoption",
+      "owner": {
+        "role": "Adoption lead",
+        "stated": true,
+        "basis": "accounted for the absence"
+      },
+      "resolved": true,
+      "coverage": {
+        "airtime_seconds": 300,
+        "transitions": 2,
+        "carried_unverifiable": 0,
+        "downstream_unconfirmed": 0,
+        "weeks_absent": 0
+      },
+      "sources": [
+        {
+          "type": "metadata",
+          "measure": "airtime seconds, adoption, week 4",
+          "value": "300",
+          "observation": "Five minutes against a 2-minute floor, after two weeks at zero. Two ticket transitions in the week."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 20,
+          "timestamp": "00:25:50",
+          "speaker": "Adoption lead",
+          "quote": "Two weeks missed, that is on me. Where we actually are: the user guide is drafting, the go-live pack has started this week."
+        }
+      ],
+      "control": {
+        "stated": true,
+        "text": "The adoption lead accepted the absence and gave a full position.",
+        "owner": "Adoption lead",
+        "date": null,
+        "score": 2,
+        "anchor": "Mitigation stated and owned, no date."
+      },
+      "attention_factors": {
+        "proximity": 5,
+        "blast_radius": 0,
+        "control_status": 2,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 2 weeks.",
+          "blast_radius": "Contained within one workstream.",
+          "control_status": "Mitigation stated and owned, no date.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 2.55,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 5,
+            "weight": 0.35,
+            "product": 1.75
+          },
+          {
+            "factor": "blast_radius",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "control_status",
+            "score": 2,
+            "weight": 0.25,
+            "product": 0.5
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "rank": 1,
+        "group_rank": 1
+      },
+      "movement": {
+        "measure": "unverifiable",
+        "from": 3,
+        "to": 0,
+        "note": null,
+        "state": "resolved"
+      }
+    },
+    {
+      "id": "AG-03",
+      "lineage": "data-migration-quiet",
+      "type": "assurance-gap",
+      "title": "Data migration attended for 48 seconds and gave no specifics",
+      "statement": "Data migration gave a full update, explained last week's 48 seconds, and put an owner and a date against the rollback rehearsal for the first time; the coverage gap is closed.",
+      "workstream": "data-migration",
+      "owner": {
+        "role": "Data migration lead",
+        "stated": true,
+        "basis": "gave the update"
+      },
+      "resolved": true,
+      "coverage": {
+        "airtime_seconds": 400,
+        "transitions": 2,
+        "carried_unverifiable": 0,
+        "downstream_unconfirmed": 0,
+        "weeks_absent": 0
+      },
+      "sources": [
+        {
+          "type": "metadata",
+          "measure": "airtime seconds, data-migration, week 4",
+          "value": "400",
+          "observation": "Six minutes and forty seconds against 48 seconds last week."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 10,
+          "timestamp": "00:12:05",
+          "speaker": "Data migration lead",
+          "quote": "Rollback rehearsal now has an owner. It is mine, and I have the twenty-first of August against it."
+        }
+      ],
+      "control": {
+        "stated": true,
+        "text": "Rollback rehearsal owned by the data migration lead against 21 August.",
+        "owner": "Data migration lead",
+        "date": "2026-08-21",
+        "score": 0,
+        "anchor": "Mitigation stated, owned, with a date."
+      },
+      "attention_factors": {
+        "proximity": 5,
+        "blast_radius": 0,
+        "control_status": 0,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 2 weeks.",
+          "blast_radius": "Contained within one workstream.",
+          "control_status": "Mitigation stated, owned, with a date.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 2.05,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 5,
+            "weight": 0.35,
+            "product": 1.75
+          },
+          {
+            "factor": "blast_radius",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "control_status",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "rank": 2,
+        "group_rank": 2
+      },
+      "movement": {
+        "measure": "unverifiable",
+        "from": 2,
+        "to": 0,
+        "note": null,
+        "state": "resolved"
+      }
+    },
+    {
+      "id": "RK-02",
+      "lineage": "contract-release-risk",
+      "type": "risk",
+      "title": "Release date is at risk while the v2 interface contract stays unpublished",
+      "statement": "A fourth week without the contract. Field mapping has now been static for 28 days, the integration lead has stopped the team writing against stubs, and platform has declined to give a date at all.",
+      "workstream": "integration",
+      "owner": {
+        "role": "Platform lead",
+        "stated": true,
+        "basis": "owns the contract"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "INT-114",
+          "field": "status_changed_date",
+          "value": "2026-07-06",
+          "observation": "Field mapping against the v2 interface contract, Blocked, 28 days without a transition, past its due date of 2026-07-31."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 4,
+          "timestamp": "00:03:30",
+          "speaker": "Integration lead",
+          "quote": "Four weeks. Field mapping has now not moved since the sixth of July. That is four weeks of nothing on the critical path."
+        },
+        {
+          "type": "board",
+          "workstream": "integration",
+          "status": "amber",
+          "date": "2026-08-03",
+          "observation": "Moved from green to amber this week. The board now agrees with the room and the export; the contradiction raised in weeks 1 to 3 no longer holds."
+        }
+      ],
+      "impact": 5,
+      "likelihood": 4,
+      "proximity": 5,
+      "control": {
+        "stated": true,
+        "text": "It is capacity. Rate limiting and the ingress work took the week.",
+        "owner": "Platform lead",
+        "date": null,
+        "score": 4,
+        "anchor": "Mitigation mentioned but unowned, or an action stated with no substance. The platform lead explicitly declined to give a date."
+      },
+      "attention_factors": {
+        "proximity": 5,
+        "blast_radius": 5,
+        "control_status": 4,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 2 weeks. The exposure is live and has been for four weeks.",
+          "blast_radius": "Programme-wide, or affects a party outside the programme.",
+          "control_status": "Mitigation mentioned but unowned, or an action stated with no substance.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "amended",
+        "by": "Delivery manager",
+        "at": "2026-08-03",
+        "note": "Impact raised to 5 by hand. The programme committed the release date to a party outside the programme, so if this lands the commitment breaks, not just the date.",
+        "carried_from_week": 3
+      },
+      "computed": {
+        "attention": 4.3,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 5,
+            "weight": 0.35,
+            "product": 1.75
+          },
+          {
+            "factor": "blast_radius",
+            "score": 5,
+            "weight": 0.25,
+            "product": 1.25
+          },
+          {
+            "factor": "control_status",
+            "score": 4,
+            "weight": 0.25,
+            "product": 1.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "exposure": 20,
+        "band": "critical",
+        "rank": 3,
+        "group_rank": 1
+      },
+      "movement": {
+        "measure": "exposure",
+        "from": 16,
+        "to": 20,
+        "note": null,
+        "state": "worsening"
+      }
+    },
+    {
+      "id": "RK-06",
+      "lineage": "test-readiness",
+      "type": "risk",
+      "title": "Test may not meet UAT entry criteria with the regression pack and NFT plan stalled",
+      "statement": "A fourth week with both items static; the test lead has stopped claiming otherwise and has committed to putting dates on both by Friday.",
+      "workstream": "test",
+      "owner": {
+        "role": "Test lead",
+        "stated": true,
+        "basis": "stated ownership of both items"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "TST-503",
+          "field": "status_changed_date",
+          "value": "2026-07-02",
+          "observation": "Non-functional test plan, Open, 32 days without a transition."
+        },
+        {
+          "type": "ticket",
+          "ticket_id": "TST-502",
+          "field": "status_changed_date",
+          "value": "2026-07-05",
+          "observation": "Automated regression pack, In progress, 29 days without a transition."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 17,
+          "timestamp": "00:22:00",
+          "speaker": "Test lead",
+          "quote": "Regression pack and the non-functional plan have still not moved. Four weeks. I am not going to pretend otherwise."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 19,
+          "timestamp": "00:24:05",
+          "speaker": "Test lead",
+          "quote": "Mine and mine. I will have dates on both by Friday."
+        }
+      ],
+      "impact": 4,
+      "likelihood": 4,
+      "proximity": 3,
+      "control": {
+        "stated": true,
+        "text": "Dates committed on both items by Friday.",
+        "owner": "Test lead",
+        "date": "2026-08-07",
+        "score": 0,
+        "anchor": "Mitigation stated, owned, with a date."
+      },
+      "attention_factors": {
+        "proximity": 3,
+        "blast_radius": 3,
+        "control_status": 0,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 6 weeks. UAT entry criteria, TST-508, are due 2026-08-28, 25 days out.",
+          "blast_radius": "One other workstream is affected. UAT entry gates the release sequence.",
+          "control_status": "Mitigation stated, owned, with a date.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 2.1,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 3,
+            "weight": 0.35,
+            "product": 1.05
+          },
+          {
+            "factor": "blast_radius",
+            "score": 3,
+            "weight": 0.25,
+            "product": 0.75
+          },
+          {
+            "factor": "control_status",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "exposure": 16,
+        "band": "critical",
+        "rank": 4,
+        "group_rank": 2
+      },
+      "movement": {
+        "measure": "exposure",
+        "from": 12,
+        "to": 16,
+        "note": null,
+        "state": "worsening"
+      }
+    },
+    {
+      "id": "RK-04",
+      "lineage": "adoption-readiness",
+      "type": "risk",
+      "title": "Adoption may not be ready for go-live if the training needs analysis does not close",
+      "statement": "The go-live pack has finally started, but the adoption lead states go-live is achievable only if the training needs analysis closes inside a fortnight; that ticket has not moved since 2 July.",
+      "workstream": "adoption",
+      "owner": {
+        "role": "Adoption lead",
+        "stated": true,
+        "basis": "claimed ownership"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "ADO-602",
+          "field": "status_changed_date",
+          "value": "2026-07-02",
+          "observation": "Training needs analysis, Open, 32 days without a transition, due 2026-08-07."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 21,
+          "timestamp": "00:27:30",
+          "speaker": "Adoption lead",
+          "quote": "Training needs analysis is still open. It has been open since the thirtieth of June and nothing has moved on it."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 23,
+          "timestamp": "00:29:25",
+          "speaker": "Adoption lead",
+          "quote": "Assuming the training analysis closes in the next fortnight, yes. If it does not, no."
+        }
+      ],
+      "impact": 4,
+      "likelihood": 3,
+      "proximity": 5,
+      "control": {
+        "stated": true,
+        "text": "Go-live pack started this week under the adoption lead.",
+        "owner": "Adoption lead",
+        "date": null,
+        "score": 2,
+        "anchor": "Mitigation stated and owned, no date."
+      },
+      "attention_factors": {
+        "proximity": 5,
+        "blast_radius": 3,
+        "control_status": 2,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 2 weeks. The stated window is a fortnight and ADO-602 is due 2026-08-07.",
+          "blast_radius": "One other workstream is affected. Go-live readiness sits on the release.",
+          "control_status": "Mitigation stated and owned, no date.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": true,
+        "terms": [
+          "assuming"
+        ],
+        "quote": "Assuming the training analysis closes in the next fortnight, yes. If it does not, no.",
+        "cap_applied": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 3.3,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 5,
+            "weight": 0.35,
+            "product": 1.75
+          },
+          {
+            "factor": "blast_radius",
+            "score": 3,
+            "weight": 0.25,
+            "product": 0.75
+          },
+          {
+            "factor": "control_status",
+            "score": 2,
+            "weight": 0.25,
+            "product": 0.5
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "exposure": 12,
+        "band": "high",
+        "rank": 5,
+        "group_rank": 3
+      },
+      "movement": {
+        "measure": "exposure",
+        "from": null,
+        "to": 12,
+        "note": "absent from week 3; last seen in week 1",
+        "state": "returned"
+      }
+    },
+    {
+      "id": "RK-03",
+      "lineage": "rollback-rehearsal",
+      "type": "risk",
+      "title": "Cutover may proceed without a rehearsed rollback",
+      "statement": "The rehearsal has an owner and a date for the first time in four weeks. The exposure has not gone, but it is no longer more likely than not.",
+      "workstream": "data-migration",
+      "owner": {
+        "role": "Data migration lead",
+        "stated": true,
+        "basis": "took ownership on the call"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "DAT-304",
+          "field": "due_date",
+          "value": "2026-08-21",
+          "observation": "Rollback rehearsal for the cutover window, Open, 21 days without a transition, now carrying a stated owner from the meeting record."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 10,
+          "timestamp": "00:12:05",
+          "speaker": "Data migration lead",
+          "quote": "Rollback rehearsal now has an owner. It is mine, and I have the twenty-first of August against it."
+        }
+      ],
+      "impact": 4,
+      "likelihood": 2,
+      "proximity": 4,
+      "control": {
+        "stated": true,
+        "text": "Rehearsal owned by the data migration lead against 21 August.",
+        "owner": "Data migration lead",
+        "date": "2026-08-21",
+        "score": 0,
+        "anchor": "Mitigation stated, owned, with a date."
+      },
+      "attention_factors": {
+        "proximity": 4,
+        "blast_radius": 3,
+        "control_status": 0,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 4 weeks. The rehearsal is dated 2026-08-21, 18 days out.",
+          "blast_radius": "One other workstream is affected. TST-504 is blocked behind it.",
+          "control_status": "Mitigation stated, owned, with a date.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 2.45,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 4,
+            "weight": 0.35,
+            "product": 1.4
+          },
+          {
+            "factor": "blast_radius",
+            "score": 3,
+            "weight": 0.25,
+            "product": 0.75
+          },
+          {
+            "factor": "control_status",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "exposure": 8,
+        "band": "medium",
+        "rank": 6,
+        "group_rank": 4
+      },
+      "movement": {
+        "measure": "exposure",
+        "from": null,
+        "to": 8,
+        "note": "absent from week 3; last seen in week 2",
+        "state": "returned"
+      }
+    },
+    {
+      "id": "RK-07",
+      "lineage": "uat-cycle-two",
+      "type": "risk",
+      "title": "UAT environment for cycle two is unconfirmed and nobody is confirming it",
+      "statement": "The cycle two schedule is now a ticket rather than an assertion, so the timeframe is no longer unknown, but it remains open with nobody confirming the window.",
+      "workstream": "test",
+      "owner": {
+        "role": "Test lead",
+        "stated": false,
+        "basis": "no owner stated; taken from the ticket assignee role"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "TST-510",
+          "field": "status",
+          "value": "Open",
+          "observation": "UAT cycle two schedule confirmed, raised 2026-07-29, Open, due 2026-09-18."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 16,
+          "timestamp": "00:20:10",
+          "speaker": "Test lead",
+          "quote": "Environment provisioning is in progress. Performance baseline went to review. UAT cycle two schedule is now a ticket, still open."
+        }
+      ],
+      "impact": 3,
+      "likelihood": 3,
+      "proximity": 2,
+      "control": {
+        "stated": true,
+        "text": "Raised as a ticket against the test lead.",
+        "owner": "Test lead",
+        "date": null,
+        "score": 2,
+        "anchor": "Mitigation stated and owned, no date."
+      },
+      "attention_factors": {
+        "proximity": 2,
+        "blast_radius": 3,
+        "control_status": 2,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 3 months. TST-510 is due 2026-09-18, 46 days out. Last week this was unknown and scored 0.",
+          "blast_radius": "One other workstream is affected.",
+          "control_status": "Mitigation stated and owned, no date.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 2.25,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 2,
+            "weight": 0.35,
+            "product": 0.7
+          },
+          {
+            "factor": "blast_radius",
+            "score": 3,
+            "weight": 0.25,
+            "product": 0.75
+          },
+          {
+            "factor": "control_status",
+            "score": 2,
+            "weight": 0.25,
+            "product": 0.5
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "exposure": 9,
+        "band": "medium",
+        "rank": 7,
+        "group_rank": 5
+      },
+      "movement": {
+        "measure": "exposure",
+        "from": 9,
+        "to": 9,
+        "note": null,
+        "state": "stable"
+      }
+    },
+    {
+      "id": "RK-05",
+      "lineage": "stub-rework",
+      "type": "risk",
+      "title": "Mapping written against stubs may need rework when the contract lands",
+      "statement": "The integration lead has stopped the team writing against stubs, so there is no interim work left to throw away. The exposure is closed by the decision, not by the contract.",
+      "workstream": "integration",
+      "owner": {
+        "role": "Integration lead",
+        "stated": true,
+        "basis": "took the decision"
+      },
+      "resolved": true,
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "INT-113",
+          "field": "status",
+          "value": "In review",
+          "observation": "Stub harness for contract-first development remains In review; no production mapping has been built on it."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 5,
+          "timestamp": "00:05:00",
+          "speaker": "Integration lead",
+          "quote": "I have stopped the team writing against stubs. It is rework we would throw away."
+        }
+      ],
+      "impact": 2,
+      "likelihood": 3,
+      "proximity": 4,
+      "control": {
+        "stated": true,
+        "text": "Team stood down from stub-based mapping by the integration lead.",
+        "owner": "Integration lead",
+        "date": "2026-08-03",
+        "score": 0,
+        "anchor": "Mitigation stated, owned, with a date."
+      },
+      "attention_factors": {
+        "proximity": 4,
+        "blast_radius": 0,
+        "control_status": 0,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 4 weeks.",
+          "blast_radius": "Contained within one workstream.",
+          "control_status": "Mitigation stated, owned, with a date.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 1.7,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 4,
+            "weight": 0.35,
+            "product": 1.4
+          },
+          {
+            "factor": "blast_radius",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "control_status",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "exposure": 6,
+        "band": "medium",
+        "rank": 8,
+        "group_rank": 6
+      },
+      "movement": {
+        "measure": "exposure",
+        "from": 6,
+        "to": 6,
+        "note": null,
+        "state": "resolved"
+      }
+    },
+    {
+      "id": "IS-05",
+      "lineage": "contract-missed-date",
+      "type": "issue",
+      "title": "The v2 interface contract missed its committed publication date with no replacement date",
+      "statement": "Ten days past the committed date, the versioning question that was blocking it has been answered, and the platform lead has still declined to give a new date.",
+      "workstream": "platform",
+      "owner": {
+        "role": "Platform lead",
+        "stated": true,
+        "basis": "owns the contract"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "PLT-208",
+          "field": "status",
+          "value": "In progress",
+          "observation": "Publish v2 interface contract remains In progress, 10 days past its due date of 2026-07-24."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 2,
+          "timestamp": "00:01:05",
+          "speaker": "Platform lead",
+          "quote": "Versioning is answered. The contract is not published yet. I am not going to give you a date I cannot hold, so I will say it is close and leave it there."
+        },
+        {
+          "type": "board",
+          "workstream": "platform",
+          "status": "amber",
+          "date": "2026-08-03",
+          "observation": "Moved from green to amber this week."
+        }
+      ],
+      "impact": 4,
+      "control": {
+        "stated": true,
+        "text": "Close, with no date attached.",
+        "owner": "Platform lead",
+        "date": null,
+        "score": 4,
+        "anchor": "Mitigation mentioned but unowned, or an action stated with no substance."
+      },
+      "attention_factors": {
+        "proximity": 5,
+        "blast_radius": 5,
+        "control_status": 4,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 2 weeks. The date has already passed.",
+          "blast_radius": "Programme-wide, or affects a party outside the programme.",
+          "control_status": "Mitigation mentioned but unowned, or an action stated with no substance.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 4.3,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 5,
+            "weight": 0.35,
+            "product": 1.75
+          },
+          {
+            "factor": "blast_radius",
+            "score": 5,
+            "weight": 0.25,
+            "product": 1.25
+          },
+          {
+            "factor": "control_status",
+            "score": 4,
+            "weight": 0.25,
+            "product": 1.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "rank": 9,
+        "group_rank": 1
+      },
+      "movement": {
+        "measure": "impact",
+        "from": 4,
+        "to": 4,
+        "note": null,
+        "state": "stable"
+      }
+    },
+    {
+      "id": "IS-06",
+      "lineage": "reporting-intake",
+      "type": "issue",
+      "title": "Reporting has opened more tickets than it closed for three consecutive weeks",
+      "statement": "Reporting opened 4 and closed none this week, a third consecutive week of growth; asked directly for the numbers, the lead did not have them and described the position as feeling manageable, and the board still reports green.",
+      "workstream": "reporting",
+      "owner": {
+        "role": "Reporting lead",
+        "stated": false,
+        "basis": "no owner stated; defaulted to the workstream lead"
+      },
+      "sources": [
+        {
+          "type": "metadata",
+          "measure": "opened against closed, reporting, weeks 2 to 4",
+          "value": "week 2: 7/2; week 3: 6/1; week 4: 4/0",
+          "observation": "Third consecutive week of intake outgrowing closure. 17 opened against 3 closed over the window."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 15,
+          "timestamp": "00:18:20",
+          "speaker": "Reporting lead",
+          "quote": "I would have to look. It feels manageable."
+        },
+        {
+          "type": "board",
+          "workstream": "reporting",
+          "status": "green",
+          "date": "2026-08-03",
+          "observation": "Reported green for a fourth week."
+        }
+      ],
+      "impact": 4,
+      "detection": {
+        "rule": "scope-growth",
+        "export_only": true,
+        "note": "Raised by the export alone in every week it has fired. Still nobody in the room has named it."
+      },
+      "control": {
+        "stated": false,
+        "text": null,
+        "owner": null,
+        "date": null,
+        "score": 5,
+        "anchor": "Nothing stated and no owner."
+      },
+      "attention_factors": {
+        "proximity": 3,
+        "blast_radius": 0,
+        "control_status": 5,
+        "evidence_confidence": 1,
+        "anchors": {
+          "proximity": "Within 6 weeks. The affected items carry due dates from 2026-08-21 onward.",
+          "blast_radius": "Contained within one workstream.",
+          "control_status": "Nothing stated and no owner.",
+          "evidence_confidence": "Two or more source types cover this and they disagree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": true,
+        "statement": "The export shows three consecutive weeks of intake outgrowing closure, 17 opened against 3 closed. The reporting lead could not give the numbers and described the position as feeling manageable. The board reports green. The export is the harder record and it supports neither.",
+        "source_types": [
+          "ticket",
+          "transcript",
+          "board"
+        ],
+        "precedence": "ticket",
+        "routed_to": "Reporting lead, with the delivery manager as owner of the reported board"
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 2.45,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 3,
+            "weight": 0.35,
+            "product": 1.05
+          },
+          {
+            "factor": "blast_radius",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "control_status",
+            "score": 5,
+            "weight": 0.25,
+            "product": 1.25
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 1,
+            "weight": 0.15,
+            "product": 0.15
+          }
+        ],
+        "rank": 10,
+        "group_rank": 2
+      },
+      "movement": {
+        "measure": "impact",
+        "from": 3,
+        "to": 4,
+        "note": null,
+        "state": "worsening"
+      }
+    },
+    {
+      "id": "IS-03",
+      "lineage": "stale-test",
+      "type": "issue",
+      "title": "Six test tickets have had no status transition for more than 10 days",
+      "statement": "Six of ten test tickets are now static, four of them for more than 18 days, and the two oldest have not moved for a month.",
+      "workstream": "test",
+      "owner": {
+        "role": "Test lead",
+        "stated": true,
+        "basis": "holds four of the six"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "TST-503",
+          "field": "status_changed_date",
+          "value": "2026-07-02",
+          "observation": "Non-functional test plan, Open, 32 days without a transition."
+        },
+        {
+          "type": "ticket",
+          "ticket_id": "TST-502",
+          "field": "status_changed_date",
+          "value": "2026-07-05",
+          "observation": "Automated regression pack, In progress, 29 days without a transition."
+        },
+        {
+          "type": "ticket",
+          "ticket_id": "TST-504",
+          "field": "status_changed_date",
+          "value": "2026-07-07",
+          "observation": "End-to-end scenario using migrated data, Blocked, 27 days without a transition."
+        },
+        {
+          "type": "ticket",
+          "ticket_id": "TST-505",
+          "field": "status_changed_date",
+          "value": "2026-07-16",
+          "observation": "Defect triage process, In progress, 18 days without a transition."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 17,
+          "timestamp": "00:22:00",
+          "speaker": "Test lead",
+          "quote": "Regression pack and the non-functional plan have still not moved. Four weeks. I am not going to pretend otherwise."
+        }
+      ],
+      "impact": 4,
+      "detection": {
+        "rule": "staleness",
+        "export_only": false,
+        "note": "Detection fires on six tickets; the test lead independently raised two of them."
+      },
+      "control": {
+        "stated": true,
+        "text": "Dates committed on the two oldest by Friday.",
+        "owner": "Test lead",
+        "date": "2026-08-07",
+        "score": 0,
+        "anchor": "Mitigation stated, owned, with a date."
+      },
+      "attention_factors": {
+        "proximity": 3,
+        "blast_radius": 0,
+        "control_status": 0,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 6 weeks.",
+          "blast_radius": "Contained within one workstream.",
+          "control_status": "Mitigation stated, owned, with a date.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 1.35,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 3,
+            "weight": 0.35,
+            "product": 1.05
+          },
+          {
+            "factor": "blast_radius",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "control_status",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "rank": 11,
+        "group_rank": 3
+      },
+      "movement": {
+        "measure": "impact",
+        "from": 3,
+        "to": 4,
+        "note": null,
+        "state": "worsening"
+      }
+    },
+    {
+      "id": "IS-04",
+      "lineage": "env-provisioning",
+      "type": "issue",
+      "title": "Integration test environment was not provisioned before the integration milestone",
+      "statement": "Provisioning is still only in progress, 12 days after it started moving, and the revised sequence committed for 31 July was not restated this week.",
+      "workstream": "test",
+      "owner": {
+        "role": "Test lead",
+        "stated": true,
+        "basis": "holds the provisioning ticket"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "TST-506",
+          "field": "status_changed_date",
+          "value": "2026-07-22",
+          "observation": "Environment provisioning for integration test, In progress, 12 days without a transition, past its due date of 2026-07-24."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 16,
+          "timestamp": "00:20:10",
+          "speaker": "Test lead",
+          "quote": "Environment provisioning is in progress. Performance baseline went to review. UAT cycle two schedule is now a ticket, still open."
+        }
+      ],
+      "impact": 3,
+      "control": {
+        "stated": true,
+        "text": "In progress with the test lead.",
+        "owner": "Test lead",
+        "date": null,
+        "score": 4,
+        "anchor": "Mitigation mentioned but unowned, or an action stated with no substance. The 31 July revised sequence was not restated and no ticket carries it."
+      },
+      "attention_factors": {
+        "proximity": 4,
+        "blast_radius": 3,
+        "control_status": 4,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 4 weeks.",
+          "blast_radius": "One other workstream is affected.",
+          "control_status": "Mitigation mentioned but unowned, or an action stated with no substance.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "accepted",
+        "by": "Delivery manager",
+        "at": "2026-07-20",
+        "note": null,
+        "carried_from_week": 3
+      },
+      "computed": {
+        "attention": 3.45,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 4,
+            "weight": 0.35,
+            "product": 1.4
+          },
+          {
+            "factor": "blast_radius",
+            "score": 3,
+            "weight": 0.25,
+            "product": 0.75
+          },
+          {
+            "factor": "control_status",
+            "score": 4,
+            "weight": 0.25,
+            "product": 1.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "rank": 12,
+        "group_rank": 4
+      },
+      "movement": {
+        "measure": "impact",
+        "from": 3,
+        "to": 3,
+        "note": null,
+        "state": "stable"
+      }
+    },
+    {
+      "id": "IS-07",
+      "lineage": "stale-reporting",
+      "type": "issue",
+      "title": "Eight reporting tickets have had no status transition for more than 10 days",
+      "statement": "Eight of twenty reporting tickets are static for 11 to 19 days, in the same window that four more were opened and none closed. Still nobody has raised it.",
+      "workstream": "reporting",
+      "owner": {
+        "role": "Reporting lead",
+        "stated": false,
+        "basis": "no owner stated; defaulted to the workstream lead"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "REP-403",
+          "field": "status_changed_date",
+          "value": "2026-07-15",
+          "observation": "Semantic layer for the finance dataset, In progress, 19 days without a transition."
+        },
+        {
+          "type": "ticket",
+          "ticket_id": "REP-404",
+          "field": "status_changed_date",
+          "value": "2026-07-15",
+          "observation": "Regional breakdown on the volumes report, Open, 19 days without a transition."
+        },
+        {
+          "type": "ticket",
+          "ticket_id": "REP-405",
+          "field": "status_changed_date",
+          "value": "2026-07-16",
+          "observation": "Prior-period comparison on the volumes report, Open, 18 days without a transition."
+        },
+        {
+          "type": "ticket",
+          "ticket_id": "REP-407",
+          "field": "status_changed_date",
+          "value": "2026-07-17",
+          "observation": "Export to spreadsheet on the operations report, Open, 17 days without a transition."
+        }
+      ],
+      "impact": 3,
+      "detection": {
+        "rule": "staleness",
+        "export_only": true,
+        "note": "Raised by the export alone. Nobody in the room has mentioned any of the eight in four weeks."
+      },
+      "control": {
+        "stated": false,
+        "text": null,
+        "owner": null,
+        "date": null,
+        "score": 5,
+        "anchor": "Nothing stated and no owner."
+      },
+      "attention_factors": {
+        "proximity": 3,
+        "blast_radius": 0,
+        "control_status": 5,
+        "evidence_confidence": 5,
+        "anchors": {
+          "proximity": "Within 6 weeks.",
+          "blast_radius": "Contained within one workstream.",
+          "control_status": "Nothing stated and no owner.",
+          "evidence_confidence": "A single source, uncorroborated. Only the export covers this."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 3.05,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 3,
+            "weight": 0.35,
+            "product": 1.05
+          },
+          {
+            "factor": "blast_radius",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "control_status",
+            "score": 5,
+            "weight": 0.25,
+            "product": 1.25
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 5,
+            "weight": 0.15,
+            "product": 0.75
+          }
+        ],
+        "rank": 13,
+        "group_rank": 5
+      },
+      "movement": {
+        "measure": "impact",
+        "from": 2,
+        "to": 3,
+        "note": null,
+        "state": "worsening"
+      }
+    },
+    {
+      "id": "IS-02",
+      "lineage": "reconciliation-unassigned",
+      "type": "issue",
+      "title": "Post-cutover reconciliation report has not been picked up",
+      "statement": "Open for 31 days with no transition and nobody assigned. Raised in week 1, unmentioned in weeks 2 and 3, and confirmed still untouched by the workstream lead this week.",
+      "workstream": "data-migration",
+      "owner": {
+        "role": null,
+        "stated": false
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "DAT-306",
+          "field": "status_changed_date",
+          "value": "2026-07-03",
+          "observation": "Reconciliation report for post-cutover checks, Open, 31 days without a transition, due 2026-08-28."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 12,
+          "timestamp": "00:15:00",
+          "speaker": "Data migration lead",
+          "quote": "The cutover runbook is drafting. The reconciliation report is still untouched."
+        }
+      ],
+      "impact": 3,
+      "control": {
+        "stated": false,
+        "text": null,
+        "owner": null,
+        "date": null,
+        "score": 5,
+        "anchor": "Nothing stated and no owner."
+      },
+      "attention_factors": {
+        "proximity": 2,
+        "blast_radius": 0,
+        "control_status": 5,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 3 months. The ticket is due 2026-08-28, 25 days out.",
+          "blast_radius": "Contained within one workstream.",
+          "control_status": "Nothing stated and no owner.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "rejected",
+        "by": "Delivery manager",
+        "at": "2026-08-03",
+        "note": "Rejected as a register item. The reconciliation report is post-cutover verification, not delivery scope, and it will be picked up in the cutover runbook. Kept on the record so the decision is visible rather than the item quietly disappearing."
+      },
+      "computed": {
+        "attention": 2.25,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 2,
+            "weight": 0.35,
+            "product": 0.7
+          },
+          {
+            "factor": "blast_radius",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "control_status",
+            "score": 5,
+            "weight": 0.25,
+            "product": 1.25
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "rank": 14,
+        "group_rank": 6
+      },
+      "movement": {
+        "measure": "impact",
+        "from": 2,
+        "to": 3,
+        "note": null,
+        "state": "worsening"
+      }
+    },
+    {
+      "id": "IS-08",
+      "lineage": "stale-adoption",
+      "type": "issue",
+      "title": "Six adoption tickets have had no status transition for more than 10 days",
+      "statement": "Six of eight adoption tickets are static for 12 to 32 days, which is what the two absent weeks were hiding. The workstream is now reporting, so this can be raised rather than folded into a coverage gap.",
+      "workstream": "adoption",
+      "owner": {
+        "role": "Adoption lead",
+        "stated": true,
+        "basis": "raised the oldest of the six"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "ADO-602",
+          "field": "status_changed_date",
+          "value": "2026-07-02",
+          "observation": "Training needs analysis, Open, 32 days without a transition, due 2026-08-07."
+        },
+        {
+          "type": "ticket",
+          "ticket_id": "ADO-601",
+          "field": "status_changed_date",
+          "value": "2026-07-10",
+          "observation": "Stakeholder map for the first release, In progress, 24 days without a transition."
+        },
+        {
+          "type": "ticket",
+          "ticket_id": "ADO-603",
+          "field": "status_changed_date",
+          "value": "2026-07-11",
+          "observation": "Draft the user guide, In progress, 23 days without a transition, despite being described as drafting."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 21,
+          "timestamp": "00:27:30",
+          "speaker": "Adoption lead",
+          "quote": "Training needs analysis is still open. It has been open since the thirtieth of June and nothing has moved on it."
+        }
+      ],
+      "impact": 2,
+      "detection": {
+        "rule": "staleness",
+        "export_only": false,
+        "note": "Detection fires on six tickets. In weeks 2 and 3 it was folded into AG-01, because nothing about the workstream could be verified. With the workstream reporting again it is raised on its own."
+      },
+      "control": {
+        "stated": false,
+        "text": null,
+        "owner": null,
+        "date": null,
+        "score": 5,
+        "anchor": "Nothing stated and no owner. The stall was described, not addressed."
+      },
+      "attention_factors": {
+        "proximity": 3,
+        "blast_radius": 0,
+        "control_status": 5,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 6 weeks. ADO-602 is due 2026-08-07.",
+          "blast_radius": "Contained within one workstream.",
+          "control_status": "Nothing stated and no owner.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 2.6,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 3,
+            "weight": 0.35,
+            "product": 1.05
+          },
+          {
+            "factor": "blast_radius",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "control_status",
+            "score": 5,
+            "weight": 0.25,
+            "product": 1.25
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "rank": 15,
+        "group_rank": 7
+      },
+      "movement": {
+        "measure": "impact",
+        "from": null,
+        "to": 2,
+        "note": null,
+        "state": "new"
+      }
+    },
+    {
+      "id": "IS-01",
+      "lineage": "migration-integrity",
+      "type": "issue",
+      "title": "Migration dry run failed referential integrity on two account tables",
+      "statement": "Integrity fixes remain in progress and load-step tuning has started; the effect stays inside the workstream's own sprint.",
+      "workstream": "data-migration",
+      "owner": {
+        "role": "Data migration lead",
+        "stated": true,
+        "basis": "gave the update"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "DAT-303",
+          "field": "status",
+          "value": "In progress",
+          "observation": "Referential integrity fixes on the account tables, In progress, due 2026-08-14."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 9,
+          "timestamp": "00:10:20",
+          "speaker": "Data migration lead",
+          "quote": "Apologies for last week, I was double-booked. Integrity fixes are in progress, dry run two is loaded, load-step tuning has started."
+        }
+      ],
+      "impact": 2,
+      "control": {
+        "stated": true,
+        "text": "Fixes in progress under the data engineer.",
+        "owner": "Data engineer",
+        "date": null,
+        "score": 2,
+        "anchor": "Mitigation stated and owned, no date."
+      },
+      "attention_factors": {
+        "proximity": 4,
+        "blast_radius": 0,
+        "control_status": 2,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 4 weeks. Dry run two is due 2026-08-07, 4 days out.",
+          "blast_radius": "Contained within one workstream.",
+          "control_status": "Mitigation stated and owned, no date.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "accepted",
+        "by": "Delivery manager",
+        "at": "2026-07-13",
+        "note": null,
+        "carried_from_week": 3
+      },
+      "computed": {
+        "attention": 2.2,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 4,
+            "weight": 0.35,
+            "product": 1.4
+          },
+          {
+            "factor": "blast_radius",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "control_status",
+            "score": 2,
+            "weight": 0.25,
+            "product": 0.5
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "rank": 16,
+        "group_rank": 8
+      },
+      "movement": {
+        "measure": "impact",
+        "from": 2,
+        "to": 2,
+        "note": null,
+        "state": "stable"
+      }
+    },
+    {
+      "id": "DP-01",
+      "lineage": "integration-waits-platform",
+      "type": "dependency",
+      "title": "Integration is waiting on Platform for the published v2 interface contract",
+      "statement": "Fourth week waiting. The versioning blocker upstream has cleared, so publication is now a platform action and nothing else; INT-114 has had no transition in 28 days.",
+      "workstream": "integration",
+      "waiting_workstream": "integration",
+      "counterparty": "platform",
+      "week_started": 1,
+      "blocking": true,
+      "owner": {
+        "role": "Platform lead",
+        "stated": true,
+        "basis": "owns the counterparty ticket"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "INT-114",
+          "field": "blocked_by",
+          "value": "PLT-208",
+          "observation": "Field mapping, Blocked, 28 days without a transition."
+        },
+        {
+          "type": "ticket",
+          "ticket_id": "INT-115",
+          "field": "blocked_by",
+          "value": "PLT-208",
+          "observation": "Idempotency keys on the inbound endpoint, Blocked, 26 days without a transition."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 6,
+          "timestamp": "00:06:40",
+          "speaker": "Programme architect",
+          "quote": "I signed off versioning on Wednesday. Publication is a platform action now, and it is the only thing standing between integration and moving."
+        },
+        {
+          "type": "board",
+          "workstream": "integration",
+          "status": "amber",
+          "date": "2026-08-03",
+          "observation": "Moved to amber. The board now agrees with the export and the room."
+        }
+      ],
+      "criticality": 5,
+      "control": {
+        "stated": true,
+        "text": "It is capacity. Rate limiting and the ingress work took the week.",
+        "owner": "Platform lead",
+        "date": null,
+        "score": 4,
+        "anchor": "Mitigation mentioned but unowned, or an action stated with no substance."
+      },
+      "attention_factors": {
+        "proximity": 5,
+        "blast_radius": 5,
+        "control_status": 4,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 2 weeks. The commitment passed 10 days ago.",
+          "blast_radius": "Programme-wide, or affects a party outside the programme.",
+          "control_status": "Mitigation mentioned but unowned, or an action stated with no substance.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 4.3,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 5,
+            "weight": 0.35,
+            "product": 1.75
+          },
+          {
+            "factor": "blast_radius",
+            "score": 5,
+            "weight": 0.25,
+            "product": 1.25
+          },
+          {
+            "factor": "control_status",
+            "score": 4,
+            "weight": 0.25,
+            "product": 1.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "rank": 17,
+        "group_rank": 1
+      },
+      "movement": {
+        "measure": "criticality",
+        "from": 5,
+        "to": 5,
+        "note": null,
+        "state": "stable",
+        "weeks_waiting": 4
+      }
+    },
+    {
+      "id": "DP-04",
+      "lineage": "versioning-decision",
+      "type": "dependency",
+      "title": "Platform is waiting on the Programme architect for the versioning decision",
+      "statement": "The architect signed off versioning on Wednesday. The dependency is discharged and the constraint has moved wholly to platform capacity.",
+      "workstream": "platform",
+      "waiting_workstream": "platform",
+      "counterparty": "programme",
+      "week_started": 3,
+      "blocking": true,
+      "owner": {
+        "role": "Programme architect",
+        "stated": true,
+        "basis": "held the decision"
+      },
+      "resolved": true,
+      "sources": [
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 6,
+          "timestamp": "00:06:40",
+          "speaker": "Programme architect",
+          "quote": "I signed off versioning on Wednesday. Publication is a platform action now, and it is the only thing standing between integration and moving."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 2,
+          "timestamp": "00:01:05",
+          "speaker": "Platform lead",
+          "quote": "Versioning is answered. The contract is not published yet. I am not going to give you a date I cannot hold, so I will say it is close and leave it there."
+        }
+      ],
+      "criticality": 5,
+      "control": {
+        "stated": true,
+        "text": "Versioning signed off by the programme architect.",
+        "owner": "Programme architect",
+        "date": "2026-07-29",
+        "score": 0,
+        "anchor": "Mitigation stated, owned, with a date."
+      },
+      "attention_factors": {
+        "proximity": 5,
+        "blast_radius": 5,
+        "control_status": 0,
+        "evidence_confidence": 5,
+        "anchors": {
+          "proximity": "Within 2 weeks.",
+          "blast_radius": "Programme-wide, or affects a party outside the programme.",
+          "control_status": "Mitigation stated, owned, with a date.",
+          "evidence_confidence": "A single source, uncorroborated. Only the transcript covers this; no ticket records the sign-off."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 3.75,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 5,
+            "weight": 0.35,
+            "product": 1.75
+          },
+          {
+            "factor": "blast_radius",
+            "score": 5,
+            "weight": 0.25,
+            "product": 1.25
+          },
+          {
+            "factor": "control_status",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 5,
+            "weight": 0.15,
+            "product": 0.75
+          }
+        ],
+        "rank": 18,
+        "group_rank": 2
+      },
+      "movement": {
+        "measure": "criticality",
+        "from": 5,
+        "to": 5,
+        "note": null,
+        "state": "resolved"
+      }
+    },
+    {
+      "id": "DP-02",
+      "lineage": "test-waits-migration",
+      "type": "dependency",
+      "title": "Test is waiting on Data migration for the rollback rehearsal",
+      "statement": "Fourth week waiting, but the counterparty ticket now carries an owner and a date for the first time, so the wait has an end.",
+      "workstream": "test",
+      "waiting_workstream": "test",
+      "counterparty": "data-migration",
+      "week_started": 1,
+      "blocking": true,
+      "owner": {
+        "role": "Data migration lead",
+        "stated": true,
+        "basis": "took ownership of the counterparty ticket"
+      },
+      "sources": [
+        {
+          "type": "ticket",
+          "ticket_id": "TST-504",
+          "field": "blocked_by",
+          "value": "DAT-304",
+          "observation": "End-to-end scenario using migrated data, Blocked, 27 days without a transition."
+        },
+        {
+          "type": "transcript",
+          "week": 4,
+          "line": 10,
+          "timestamp": "00:12:05",
+          "speaker": "Data migration lead",
+          "quote": "Rollback rehearsal now has an owner. It is mine, and I have the twenty-first of August against it."
+        }
+      ],
+      "criticality": 3,
+      "control": {
+        "stated": true,
+        "text": "Rehearsal owned by the data migration lead against 21 August.",
+        "owner": "Data migration lead",
+        "date": "2026-08-21",
+        "score": 0,
+        "anchor": "Mitigation stated, owned, with a date."
+      },
+      "attention_factors": {
+        "proximity": 3,
+        "blast_radius": 3,
+        "control_status": 0,
+        "evidence_confidence": 2,
+        "anchors": {
+          "proximity": "Within 6 weeks. DAT-304 is dated 2026-08-21, 18 days out.",
+          "blast_radius": "One other workstream is affected.",
+          "control_status": "Mitigation stated, owned, with a date.",
+          "evidence_confidence": "Two or more source types cover this and they agree."
+        }
+      },
+      "hedge": {
+        "present": false
+      },
+      "contradiction": {
+        "present": false
+      },
+      "acceptance": {
+        "state": "unaccepted"
+      },
+      "computed": {
+        "attention": 2.1,
+        "attention_terms": [
+          {
+            "factor": "proximity",
+            "score": 3,
+            "weight": 0.35,
+            "product": 1.05
+          },
+          {
+            "factor": "blast_radius",
+            "score": 3,
+            "weight": 0.25,
+            "product": 0.75
+          },
+          {
+            "factor": "control_status",
+            "score": 0,
+            "weight": 0.25,
+            "product": 0.0
+          },
+          {
+            "factor": "evidence_confidence",
+            "score": 2,
+            "weight": 0.15,
+            "product": 0.3
+          }
+        ],
+        "rank": 19,
+        "group_rank": 3
+      },
+      "movement": {
+        "measure": "criticality",
+        "from": 3,
+        "to": 3,
+        "note": null,
+        "state": "stable",
+        "weeks_waiting": 4
+      }
+    }
+  ],
+  "gaps": [
+    {
+      "ref": "DP-03",
+      "subject": "integration and data migration waiting on the programme architect for the revised sequence",
+      "reason": "A second week without evidence. The 31 July commitment has now passed and was not restated, and no ticket carries it. Held out rather than carried forward on week 2's quote."
+    },
+    {
+      "ref": "stale-data-migration",
+      "subject": "six data migration tickets, 11 to 31 days without a transition",
+      "reason": "Staleness fires. DAT-306 is raised as IS-02, DAT-304 now carries an owner and a date, and the remaining four sit inside the in-progress work the lead described. Not raised a second time."
+    },
+    {
+      "ref": "stale-integration",
+      "subject": "four integration tickets, 12 to 28 days without a transition",
+      "reason": "Staleness fires. INT-114 and INT-115 are the evidence for DP-01, and the workstream has been formally stopped by its own lead. Not raised separately."
+    },
+    {
+      "ref": "stale-platform",
+      "subject": "PLT-210 and PLT-203, 11 and 12 days without a transition",
+      "reason": "Below the three-ticket threshold for platform. Recorded, not raised."
+    },
+    {
+      "ref": "scope-growth-minor",
+      "subject": "integration and data migration, two consecutive weeks of opened exceeding closed",
+      "reason": "The detection fires literally, but the excess is a single ticket in each week, below the materiality threshold. At this data volume it is noise. Recorded, not raised."
+    }
+  ]
+}

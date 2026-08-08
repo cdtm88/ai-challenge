@@ -1,0 +1,43 @@
+{
+  "week": 2,
+  "date": "2026-07-20",
+  "meeting": "Weekly delivery review",
+  "programme": "Programme Meridian",
+  "duration_seconds": 2700,
+  "note": "Speakers are role labels. Adoption did not attend and sent no written update.",
+  "airtime_seconds": {
+    "platform": 560,
+    "integration": 520,
+    "data-migration": 470,
+    "reporting": 450,
+    "test": 420,
+    "adoption": 0
+  },
+  "lines": [
+    { "line": 1, "timestamp": "00:00:10", "speaker": "Delivery manager", "workstream": null, "text": "Week two. Adoption have not dialled in and I have had nothing in writing from them, so we will come back to that." },
+    { "line": 2, "timestamp": "00:01:30", "speaker": "Platform lead", "workstream": "platform", "text": "Platform has had a good week. Contract review is closed out, ingress work is moving, the certificate runbook is under way." },
+    { "line": 3, "timestamp": "00:03:44", "speaker": "Delivery manager", "workstream": null, "text": "Still the twenty-fourth on the contract?" },
+    { "line": 4, "timestamp": "00:04:00", "speaker": "Platform lead", "workstream": "platform", "text": "Still the twenty-fourth." },
+    { "line": 5, "timestamp": "00:05:36", "speaker": "Integration lead", "workstream": "integration", "text": "Field mapping is formally blocked now. I have marked it against the contract ticket rather than leave it looking like it is in flight." },
+    { "line": 6, "timestamp": "00:07:10", "speaker": "Integration lead", "workstream": "integration", "text": "Idempotency keys went the same way this week. Two tickets waiting on one platform ticket." },
+    { "line": 7, "timestamp": "00:09:02", "speaker": "Test lead", "workstream": "test", "text": "Environment provisioning has gone past the integration milestone date. It has not been actioned and the milestone is now behind us." },
+    { "line": 8, "timestamp": "00:10:15", "speaker": "Delivery manager", "workstream": null, "text": "So this is no longer a question of whether. It has happened." },
+    { "line": 9, "timestamp": "00:10:40", "speaker": "Test lead", "workstream": "test", "text": "It has happened. Integration and data migration both have to replan around it." },
+    { "line": 10, "timestamp": "00:12:20", "speaker": "Programme architect", "workstream": "test", "text": "I will take the replan. I can have a revised sequence by the thirty-first." },
+    { "line": 11, "timestamp": "00:14:05", "speaker": "Data migration lead", "workstream": "data-migration", "text": "Referential integrity fixes are progressing. Reference data mapping is closed. Dry run two is loaded but not evaluated." },
+    { "line": 12, "timestamp": "00:16:30", "speaker": "Data migration lead", "workstream": "data-migration", "text": "Rollback rehearsal still has no owner and no date. I keep saying it and I keep not doing it." },
+    { "line": 13, "timestamp": "00:18:12", "speaker": "Delivery manager", "workstream": null, "text": "It is on the board as amber and I am going to keep it amber until that has a name on it." },
+    { "line": 14, "timestamp": "00:20:00", "speaker": "Reporting lead", "workstream": "reporting", "text": "Reporting closed two defects this week, the duplicate rows and the timezone one." },
+    { "line": 15, "timestamp": "00:21:48", "speaker": "Reporting lead", "workstream": "reporting", "text": "Finance keep adding requests. I am logging them all so we have the picture." },
+    { "line": 16, "timestamp": "00:23:05", "speaker": "Delivery manager", "workstream": null, "text": "Is the picture a problem?" },
+    { "line": 17, "timestamp": "00:23:20", "speaker": "Reporting lead", "workstream": "reporting", "text": "Not yet. We are keeping up more or less." },
+    { "line": 18, "timestamp": "00:25:40", "speaker": "Test lead", "workstream": "test", "text": "The regression pack and the non-functional test plan have not moved in a fortnight. Both are mine and both have been squeezed out by the environment problem." },
+    { "line": 19, "timestamp": "00:27:55", "speaker": "Test lead", "workstream": "test", "text": "The end-to-end scenario on migrated data is still blocked behind the rollback rehearsal." },
+    { "line": 20, "timestamp": "00:30:12", "speaker": "Delivery manager", "workstream": null, "text": "Adoption. Has anyone spoken to them this week?" },
+    { "line": 21, "timestamp": "00:30:35", "speaker": "Programme architect", "workstream": "adoption", "text": "Not me." },
+    { "line": 22, "timestamp": "00:30:50", "speaker": "Reporting lead", "workstream": "adoption", "text": "Nor me." },
+    { "line": 23, "timestamp": "00:31:20", "speaker": "Delivery manager", "workstream": null, "text": "Then we do not know where adoption is, and I am not going to carry last week's line forward as if we did." },
+    { "line": 24, "timestamp": "00:33:40", "speaker": "Integration lead", "workstream": "integration", "text": "For the record, if the contract lands on the twenty-fourth we can still hold our dates. If it does not, we cannot." },
+    { "line": 25, "timestamp": "00:36:15", "speaker": "Delivery manager", "workstream": null, "text": "Understood. Board this afternoon. Adoption stays as reported because I have nothing to change it with, and I want that noted." }
+  ]
+}

@@ -1,0 +1,15 @@
+# Challenge-facing submission note — kept locally, not committed.
+docs/risk-radar-submission.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

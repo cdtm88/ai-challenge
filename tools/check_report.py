@@ -1,33 +1,32 @@
 #!/usr/bin/env python3
-"""Run the P3 checks from the design plan against the built report.
+"""Check the report against what it promises.
 
     python3 -m http.server 8765 &
     python3 tools/check_report.py                    # http, all four weeks
     python3 tools/check_report.py --file             # the single-file build
 
-Checks, one per "done when" row:
+What is checked:
 
-  RPT-02  every week reachable in one tap and directly by URL hash
-  RPT-03  every group heading prints its scale
-  RPT-04  with all disclosures closed, every row shows score+scale,
-          workstream, control status, movement and source agreement
-  RPT-05  one item walked end to end: quote with two lines of context either
-          side, ticket field rows, board status, precedence and routing
-  RPT-06  both totals recompute by hand from the printed factors
-  RPT-07  acceptance reachable and legible on every row, at both viewports
-  RPT-09  assurance gaps are the first group on every week
-  NFR-03  320px and 390px, light and dark: no horizontal overflow, no
-          clipped text, every text/background pair at least 4.5:1
-  NFR-04  greyscale the page and type, band, movement, conflict and
-          acceptance all still read
-
-Exits 0 when everything passes.
+  week switching   every week reachable in one action and directly by hash
+  sections         five, in fixed order, each stating its scale
+  the row          a number, its scale word, a title, and one meta line that
+                   carries the workstream and nothing beyond the permitted set
+  the disclosure   statement, evidence, assessment and acceptance for each row
+  contradiction    precedence named and the contradiction routed
+  arithmetic       both totals recompute by hand from the printed factors
+  overflow         at 320, 390 and 660px in both colour schemes, with
+                   overflow-x forced visible so a clipped page cannot report
+                   clean, the document is never wider than the viewport and no
+                   element's right edge crosses it
+  contrast         every text/background pair meets WCAG AA
+  greyscale        type, band, movement, conflict and acceptance all read as
+                   words with colour emulated away
+  light lock       a dark-scheme viewer still gets the light palette
 """
 
 import argparse
 import json
 import os
-import re
 import sys
 
 from playwright.sync_api import sync_playwright
@@ -37,6 +36,14 @@ BROWSER = "/opt/pw-browsers/chromium"
 WEIGHTS = {"proximity": 0.35, "blast_radius": 0.25, "control_status": 0.25,
            "evidence_confidence": 0.15}
 
+SECTIONS = ["Assurance gaps", "Risks", "Issues", "Dependencies", "Closed"]
+SCALES = ["coverage counts, not scored", "exposure, 1 to 25", "impact, 1 to 5",
+          "criticality, 1 to 5", "resolved this week"]
+
+# The meta line is a closed vocabulary. Anything else on it is a regression.
+MOVE_WORDS = ("New", "Worsening", "Improving", "Resolved", "Returned", "Reclassified")
+META_EXTRAS = ("Sources conflict", "Unmanaged", "No owner", "From tickets only")
+
 failures = []
 passes = []
 
@@ -45,6 +52,10 @@ def check(ok, label, detail=""):
     (passes if ok else failures).append(label + (f" — {detail}" if detail else ""))
     print(("  ok   " if ok else "  FAIL ") + label + (f"  {detail}" if detail and not ok else ""))
 
+
+# --------------------------------------------------------------------------
+# browser-side probes
+# --------------------------------------------------------------------------
 
 CONTRAST_JS = """
 () => {
@@ -63,6 +74,7 @@ CONTRAST_JS = """
   const bad = [];
   for (const n of document.querySelectorAll('body *')) {
     if (!n.offsetParent && n.tagName !== 'BODY') continue;
+    if (n.closest('details:not([open])')) continue;
     const direct = Array.from(n.childNodes)
       .filter(c => c.nodeType === 3 && c.textContent.trim().length)
       .map(c => c.textContent.trim()).join(' ');
@@ -77,284 +89,240 @@ CONTRAST_JS = """
     const large = px >= 24 || (px >= 18.66 && parseInt(cs.fontWeight,10) >= 700);
     const need = large ? 3.0 : 4.5;
     if (ratio < need) bad.push({
-      tag: n.tagName.toLowerCase(), cls: n.className && String(n.className).slice(0,40),
-      text: direct.slice(0,44), ratio: Math.round(ratio*100)/100, need, px
+      tag: n.tagName.toLowerCase(), cls: String(n.className).slice(0,40),
+      text: direct.slice(0,44), ratio: Math.round(ratio*100)/100, need
     });
   }
   return bad;
 }
 """
 
-CLIP_JS = """
+# Force overflow visible everywhere first. A page that hides its overflow
+# reports scrollWidth === clientWidth while a real phone clips the content;
+# measuring after the mask is off is the only honest test.
+OVERFLOW_JS = """
 () => {
-  const bad = [];
-  for (const n of document.querySelectorAll('body *')) {
-    if (!n.offsetParent) continue;
-    const cs = getComputedStyle(n);
-    if (cs.overflow === 'visible' && cs.overflowX === 'visible') continue;
-    // Visually-hidden labels are 1x1 with a clip-path by design; they are
-    // read by assistive tech, not clipped away from a sighted reader.
-    if (cs.clipPath && cs.clipPath !== 'none') continue;
-    if (n.clientWidth <= 1 || n.clientHeight <= 1) continue;
-    if (n.scrollWidth > n.clientWidth + 1 || n.scrollHeight > n.clientHeight + 1) {
-      bad.push({ tag: n.tagName.toLowerCase(), cls: String(n.className).slice(0,40),
-                 sw: n.scrollWidth, cw: n.clientWidth, sh: n.scrollHeight, ch: n.clientHeight });
-    }
-  }
-  return bad;
-}
-"""
+  const patch = document.createElement('style');
+  patch.id = '__overflow_probe';
+  patch.textContent = '*,*::before,*::after{overflow-x:visible !important;overflow:visible !important}';
+  document.head.appendChild(patch);
+  void document.body.offsetWidth;
 
-WIDE_JS = """
-() => {
-  const bad = [];
-  const limit = document.documentElement.clientWidth + 1;
+  const vw = window.innerWidth;
+  const wide = [];
   for (const n of document.querySelectorAll('body *')) {
     if (!n.offsetParent) continue;
+    if (n.closest('details:not([open])')) continue;
     const r = n.getBoundingClientRect();
-    if (r.width > limit || r.right > limit + 0.5) {
-      bad.push({ tag: n.tagName.toLowerCase(), cls: String(n.className).slice(0,40),
-                 w: Math.round(r.width), right: Math.round(r.right), limit });
+    if (r.width === 0 && r.height === 0) continue;
+    if (r.right > vw + 0.5 || r.width > vw + 0.5) {
+      wide.push({ tag: n.tagName.toLowerCase(), cls: String(n.className).slice(0,44),
+                  right: Math.round(r.right), w: Math.round(r.width) });
     }
   }
-  return bad;
+  const out = { vw, scrollWidth: document.documentElement.scrollWidth,
+                bodyScroll: document.body.scrollWidth, wide: wide.slice(0, 6),
+                wideCount: wide.length };
+  patch.remove();
+  return out;
 }
 """
 
-
-def rows_meta(page):
-    return page.evaluate("""
-    () => Array.from(document.querySelectorAll('.row')).map(r => ({
-      id: r.querySelector('.row__id').textContent.trim(),
-      type: (r.className.match(/row--([a-z-]+)/) || [])[1],
-      chips: Array.from(r.querySelectorAll('.chip')).map(c => c.textContent.trim()),
-      score: (r.querySelector('.score__value') || {}).textContent || null,
-      band: (r.querySelector('.score__band') || {}).textContent || null,
-      counts: Array.from(r.querySelectorAll('.score__counts div')).map(d => d.textContent.trim()),
-      attention: (r.querySelector('.score__attention') || {}).textContent || null,
-      meta: Array.from(r.querySelectorAll('.row__meta dt')).map(
-        (dt, i) => dt.textContent.trim() + '=' + (r.querySelectorAll('.row__meta dd')[i] || {}).textContent),
-      metaText: (r.querySelector('.row__meta') || {}).textContent || '',
-      acceptance: (r.querySelector('.adj__state') || {}).textContent || null,
-      buttons: Array.from(r.querySelectorAll('.adj__btn')).map(b => ({
-        label: b.textContent.trim(), w: Math.round(b.getBoundingClientRect().width),
-        h: Math.round(b.getBoundingClientRect().height)
-      })),
-      openDisclosures: r.querySelectorAll('details[open]').length
-    }))""")
+ROWS_JS = """
+() => Array.from(document.querySelectorAll('.row')).map(r => ({
+  id: (r.querySelector('.row__more > summary') || {}).textContent || '',
+  num: (r.querySelector('.row__num') || {}).textContent || '',
+  scale: (r.querySelector('.row__scale') || {}).textContent || '',
+  title: (r.querySelector('.row__title') || {}).textContent || '',
+  meta: Array.from(r.querySelectorAll('.row__meta > span:not(.sep)')).map(s => s.textContent.trim()),
+  open: r.querySelectorAll('details[open]').length,
+  detailText: (r.querySelector('.detail') || {}).textContent || '',
+  buttons: Array.from(r.querySelectorAll('.adj__btn[data-act]')).map(b => ({
+    label: b.textContent.trim(),
+    w: Math.round(b.getBoundingClientRect().width),
+    h: Math.round(b.getBoundingClientRect().height)
+  })),
+  state: (r.querySelector('.adj__state') || {}).textContent || ''
+}))
+"""
 
 
-def run_week(page, base, week, single_file):
-    url = (base + "#week-" + str(week))
-    page.goto(url, wait_until="load")
+def load(page, base, week):
+    page.goto(f"{base}#week-{week}", wait_until="load")
     page.wait_for_selector(".row", timeout=15000)
-    page.wait_for_timeout(120)
+    page.wait_for_timeout(150)
 
+
+def run_week(page, base, week):
+    load(page, base, week)
     reg = json.load(open(os.path.join(ROOT, "runs", f"week-{week}-register.json"), encoding="utf-8"))
-    print(f"\n--- week {week} ({'file' if single_file else 'http'}) ---")
+    print(f"\n--- week {week} ---")
 
-    # RPT-02: reachable directly by hash.
-    shown = page.eval_on_selector('.weekbar__btn[aria-current="true"]', "b => b.textContent.trim()")
-    check(shown == "W" + str(week), f"RPT-02 week {week} reachable by URL hash", f"bar shows {shown}")
+    current = page.eval_on_selector('.weeks__btn[aria-current="true"]', "b => b.textContent.trim()")
+    check(current == f"Week {week}", f"week {week} reachable by URL hash", f"bar shows {current}")
 
-    # RPT-03: every group heading prints its scale.
-    scales = page.eval_on_selector_all(".group__scale", "ns => ns.map(n => n.textContent.trim())")
-    check(len(scales) == 4 and all(s.startswith("Scale:") for s in scales),
-          "RPT-03 all four group headings print their scale", str(scales))
+    names = page.eval_on_selector_all(".section__name", "n => n.map(x => x.textContent.trim())")
+    check(names == SECTIONS, "five sections in fixed order", str(names))
+    scales = page.eval_on_selector_all(".section__scale", "n => n.map(x => x.textContent.trim())")
+    check(scales == SCALES, "every section states its scale", str(scales))
 
-    # RPT-09: assurance gaps first.
-    order = page.eval_on_selector_all(".group .group__name", "ns => ns.map(n => n.textContent.trim())")
-    check(order == ["Assurance gaps", "Risks", "Issues", "Dependencies"],
-          "RPT-09 assurance gaps are the first group", str(order))
-
-    rows = rows_meta(page)
+    rows = page.evaluate(ROWS_JS)
     check(len(rows) == len(reg["items"]),
           f"every item in the run is on the page ({len(reg['items'])})", f"rendered {len(rows)}")
 
     by_id = {i["id"]: i for i in reg["items"]}
-    rpt04, closed = [], True
+    bad, closed_ok = [], True
     for r in rows:
-        item = by_id.get(r["id"])
+        rid = r["id"].split("·")[0].strip()
+        item = by_id.get(rid)
         if not item:
-            rpt04.append(f"{r['id']} not in the run")
+            bad.append(f"{rid} not in the run")
             continue
-        if r["openDisclosures"]:
-            closed = False
-        # score + the scale it sits on
-        if item["type"] == "assurance-gap":
-            if not r["counts"]:
-                rpt04.append(f"{r['id']} no coverage counts")
-        else:
-            if not (r["score"] or "").strip():
-                rpt04.append(f"{r['id']} no score")
-            if not (r["band"] or "").strip():
-                rpt04.append(f"{r['id']} no scale word beside the score")
-        if not (r["attention"] or "").startswith("attention"):
-            rpt04.append(f"{r['id']} no attention")
-        meta = r["metaText"]
-        for need in ("Workstream", "Owner", "Control", "Sources"):
-            if need not in meta:
-                rpt04.append(f"{r['id']} meta missing {need}")
-        if "source type" not in meta:
-            rpt04.append(f"{r['id']} no source agreement")
-        # movement word present as text, not only colour
-        move = {"new": "New", "worsening": "Worsening", "improving": "Improving", "stable": "Stable",
-                "resolved": "Resolved", "returned": "Returned", "reclassified": "Reclassified"}[item["movement"]["state"]]
-        if not any(move in c for c in r["chips"]):
-            rpt04.append(f"{r['id']} movement word {move!r} not in chips {r['chips']}")
-        # NFR-04: type word present
-        if not any(c.startswith(("Risk", "Issue", "Dependency", "Assurance gap")) for c in r["chips"]):
-            rpt04.append(f"{r['id']} type word missing from chips")
-        # conflict conveyed as a word
-        if item.get("contradiction", {}).get("present") and "Sources conflict" not in r["chips"]:
-            rpt04.append(f"{r['id']} conflict not stated as a word")
-        if item["type"] == "dependency" and item["blocking"] and "Blocking" not in r["chips"]:
-            rpt04.append(f"{r['id']} blocking not stated as a word")
-        # RPT-07
-        if not (r["acceptance"] or "").strip():
-            rpt04.append(f"{r['id']} no acceptance state word")
+        if r["open"]:
+            closed_ok = False
+        if not r["num"].strip():
+            bad.append(f"{rid}: no number")
+        if not r["scale"].strip():
+            bad.append(f"{rid}: no scale word")
+        if not r["title"].strip():
+            bad.append(f"{rid}: no title")
+        if not r["meta"]:
+            bad.append(f"{rid}: no meta line")
+            continue
+
+        # the workstream leads, and nothing beyond the permitted set follows
+        ws = r["meta"][0]
+        if ws.lower() != item["workstream"].replace("-", " "):
+            bad.append(f"{rid}: meta starts {ws!r}, not the workstream")
+        for part in r["meta"][1:]:
+            allowed = part.startswith(MOVE_WORDS) or part in META_EXTRAS
+            if not allowed:
+                bad.append(f"{rid}: meta carries {part!r}, outside the permitted set")
+        if item["movement"]["state"] == "stable" and any(p.startswith(MOVE_WORDS) for p in r["meta"][1:]):
+            bad.append(f"{rid}: stable item prints a movement word")
+
+        # everything triage does not need is behind the disclosure
+        d = r["detailText"]
+        for need, label in (("Evidence", "evidence"), ("Assessment", "assessment"),
+                            ("Owner", "owner"), ("Attention", "attention")):
+            if need not in d:
+                bad.append(f"{rid}: disclosure has no {label}")
         if len(r["buttons"]) != 3:
-            rpt04.append(f"{r['id']} acceptance controls not all three")
-        if len(r["chips"]) > 5:
-            rpt04.append(f"{r['id']} more than five chips")
+            bad.append(f"{rid}: acceptance controls not all three")
+        if not r["state"].strip():
+            bad.append(f"{rid}: no acceptance state word")
 
-    check(closed, "RPT-04 all disclosures start closed")
-    check(not rpt04, "RPT-04 / NFR-04 / RPT-07 every row states its five facts as words",
-          "; ".join(rpt04[:4]))
+    check(closed_ok, "every row starts collapsed")
+    check(not bad, "rows carry a number, a scale word, a title and one permitted meta line",
+          "; ".join(bad[:4]))
 
-    # RPT-06: recompute both totals from the printed factors.
-    bad_math = []
+    # both totals recompute by hand from the printed factors
+    math_bad = []
     for item in reg["items"]:
         f = item["attention_factors"]
         want = round(sum(f[k] * w for k, w in WEIGHTS.items()), 2)
         if abs(item["computed"]["attention"] - want) > 1e-9:
-            bad_math.append(f"{item['id']} attention")
-        if item["type"] == "risk":
-            if item["computed"]["exposure"] != item["impact"] * item["likelihood"]:
-                bad_math.append(f"{item['id']} exposure")
-    check(not bad_math, "RPT-06 both totals recompute from the printed factors", "; ".join(bad_math))
-
-    return rows
+            math_bad.append(f"{item['id']} attention")
+        if item["type"] == "risk" and item["computed"]["exposure"] != item["impact"] * item["likelihood"]:
+            math_bad.append(f"{item['id']} exposure")
+    check(not math_bad, "both totals recompute from the printed factors", "; ".join(math_bad))
 
 
 def walk_one_item(page, base):
-    """RPT-05, end to end on the week 3 conflict."""
-    print("\n--- RPT-05: walking RK-02 in week 3 end to end ---")
-    page.goto(base + "#week-3", wait_until="load")
-    page.wait_for_selector("#item-RK-02", timeout=15000)
-    page.click("#item-RK-02 .row__evidence > summary")
-    page.wait_for_selector("#item-RK-02 .panel", timeout=5000)
+    print("\n--- the conflicted integration risk, end to end ---")
+    load(page, base, 3)
+    page.eval_on_selector("#item-RK-02 .row__more", "d => d.open = true")
+    page.wait_for_timeout(150)
 
     got = page.evaluate("""
     () => {
       const r = document.getElementById('item-RK-02');
-      const lines = Array.from(r.querySelectorAll('.lines__line'));
-      const fieldKeys = Array.from(r.querySelectorAll('.fields__k')).map(n => n.textContent.trim());
-      const conflict = r.querySelector('.conflict');
-      const srcTypes = Array.from(r.querySelectorAll('.src__type')).map(n => n.textContent.trim());
-      const anchors = Array.from(r.querySelectorAll('.sum details')).length;
+      const note = (r.querySelector('.note-line.is-conflict') || {}).textContent || '';
       return {
-        contextLines: lines.length,
-        citedLines: lines.filter(l => l.classList.contains('is-cited')).length,
-        everyLineHasSpeakerAndStamp: lines.every(l =>
-          l.querySelector('.lines__who') && l.querySelector('.lines__stamp')),
-        fieldKeys, srcTypes, anchors,
-        conflictText: conflict ? conflict.textContent : '',
-        sums: Array.from(r.querySelectorAll('.sum__line')).map(n => n.textContent.trim())
+        conflict: note,
+        quote: (r.querySelector('.quote__text') || {}).textContent || '',
+        who: (r.querySelector('.quote__who') || {}).textContent || '',
+        ctx: r.querySelectorAll('.quote__ctx-line').length,
+        also: (r.querySelector('.also') || {}).textContent || '',
+        heads: Array.from(r.querySelectorAll('.detail__head')).map(n => n.textContent.trim()),
+        dts: Array.from(r.querySelectorAll('.dl dt')).map(n => n.textContent.trim()),
+        sub: (r.querySelector('.dl__sub') || {}).textContent || ''
       };
     }""")
 
-    check(got["contextLines"] == 5 and got["citedLines"] == 1,
-          "RPT-05 cited transcript line with two lines either side",
-          f"{got['contextLines']} lines, {got['citedLines']} cited")
-    check(got["everyLineHasSpeakerAndStamp"],
-          "RPT-05 speaker role and timestamp on every transcript line")
-    for k in ("status", "status changed", "days since transition", "blocked by", "due"):
-        check(k in got["fieldKeys"], f"RPT-05 ticket field row: {k}")
-    check(any(s.startswith("Board") for s in got["srcTypes"]),
-          "RPT-05 board status printed beside the other sources", str(got["srcTypes"]))
-    check("Precedence" in got["conflictText"] and "Routed to" in got["conflictText"],
-          "RPT-05 / EVI-03 precedence and routing stated")
-    check(got["anchors"] == 4, "RPT-06 each attention factor expands to its anchor",
-          f"{got['anchors']} expandable factors")
-    check(any("exposure" in s for s in got["sums"]) and any("attention" in s for s in got["sums"]),
-          "RPT-06 both totals printed as a worked sum")
-
-    anchor_text = page.eval_on_selector(
-        "#item-RK-02 .sum details:first-of-type", "d => { d.open = true; return d.textContent; }")
-    check("Within 2 weeks" in anchor_text, "RPT-06 anchor sentence reachable per factor")
+    check("Sources conflict" in got["conflict"], "contradiction is named")
+    check("precedent" in got["conflict"], "precedence stated", got["conflict"][:60])
+    check("Routed to" in got["conflict"], "contradiction routed")
+    check(got["quote"].strip().startswith("“"), "primary source is the transcript quote in full")
+    check("week 3" in got["who"] and ":" in got["who"],
+          "speaker, week, line and timestamp on the quote", got["who"])
+    check(got["ctx"] == 4, "two transcript lines either side", f"{got['ctx']} context lines")
+    check(got["also"].startswith("Also:"), "remaining sources on one compact line", got["also"][:60])
+    check(got["heads"] == ["Statement", "Evidence", "Assessment"],
+          "disclosure blocks in order", str(got["heads"]))
+    check(got["dts"][:2] == ["Exposure", "Attention"],
+          "assessment leads with the scale then attention", str(got["dts"]))
+    check(got["sub"].count("×") == 4, "four attention factors on one sub-line", got["sub"])
 
 
 def viewport_checks(page, base, width, scheme):
     page.emulate_media(color_scheme=scheme)
     page.set_viewport_size({"width": width, "height": 900})
-    page.goto(base + "#week-3", wait_until="load")
-    page.wait_for_selector(".row", timeout=15000)
-    page.wait_for_timeout(150)
-    label = f"NFR-03 {width}px {scheme}"
+    load(page, base, 3)
+    label = f"{width}px {scheme}"
 
-    doc = page.evaluate(
-        "() => ({sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,"
-        " bsw: document.body.scrollWidth})")
-    check(doc["sw"] <= doc["cw"], f"{label}: no horizontal document overflow",
-          f"scrollWidth {doc['sw']} vs clientWidth {doc['cw']}")
-
-    wide = page.evaluate(WIDE_JS)
-    check(not wide, f"{label}: nothing wider than the viewport",
-          "; ".join(f"{w['tag']}.{w['cls']} {w['w']}px" for w in wide[:3]))
-
-    clipped = page.evaluate(CLIP_JS)
-    check(not clipped, f"{label}: no clipped content",
-          "; ".join(f"{c['tag']}.{c['cls']} {c['sw']}>{c['cw']}" for c in clipped[:3]))
+    r = page.evaluate(OVERFLOW_JS)
+    check(r["scrollWidth"] == r["vw"],
+          f"{label}: document is exactly the viewport width, overflow unmasked",
+          f"scrollWidth {r['scrollWidth']} vs innerWidth {r['vw']}")
+    check(r["wideCount"] == 0, f"{label}: no element crosses the viewport edge",
+          "; ".join(f"{w['tag']}.{w['cls']} right={w['right']}" for w in r["wide"][:3]))
 
     low = page.evaluate(CONTRAST_JS)
-    check(not low, f"{label}: every pair meets WCAG AA",
+    check(not low, f"{label}: every text pair meets WCAG AA",
           "; ".join(f"{c['tag']}.{c['cls']} {c['ratio']}:1 need {c['need']} [{c['text']}]" for c in low[:4]))
 
-    if width < 900:
+    paper = page.eval_on_selector("body", "n => getComputedStyle(n).backgroundColor")
+    check(paper == "rgb(255, 255, 255)", f"{label}: light palette locked", paper)
+
+    if width < 700:
         vis = page.evaluate("""
         () => {
-          const rows = Array.from(document.querySelectorAll('.row'));
-          return {
-            allVisible: rows.every(r => r.querySelectorAll('.adj__btn').length === 3 &&
-              Array.from(r.querySelectorAll('.adj__btn')).every(b => b.offsetParent !== null)),
-            smallest: Math.min(...rows.flatMap(r => Array.from(r.querySelectorAll('.adj__btn'))
-              .map(b => Math.min(b.getBoundingClientRect().width, b.getBoundingClientRect().height))))
-          };
+          const b = Array.from(document.querySelectorAll('.adj__btn[data-act]'));
+          return { n: b.length,
+                   smallest: b.length ? Math.min(...b.map(x => x.getBoundingClientRect().height)) : 99 };
         }""")
-        check(vis["allVisible"], f"{label}: RPT-07 acceptance visible on every row, never behind a menu")
-        check(vis["smallest"] >= 43.5, f"{label}: hit targets at least 44px", f"smallest {vis['smallest']}")
+        check(vis["smallest"] >= 43.5, f"{label}: acceptance targets at least 44px tall",
+              f"smallest {vis['smallest']}")
 
 
 def greyscale_check(page, base):
-    print("\n--- NFR-04: greyscale ---")
+    print("\n--- greyscale ---")
     page.emulate_media(color_scheme="light")
-    page.set_viewport_size({"width": 1180, "height": 1000})
-    page.goto(base + "#week-3", wait_until="load")
-    page.wait_for_selector(".row", timeout=15000)
-    # Emulate achromatopsia rather than injecting a filter: it is the real
-    # condition being designed for, and it does not need an inline style,
-    # which the production Content-Security-Policy correctly refuses.
+    page.set_viewport_size({"width": 660, "height": 1000})
+    load(page, base, 3)
     cdp = page.context.new_cdp_session(page)
     cdp.send("Emulation.setEmulatedVisionDeficiency", {"type": "achromatopsia"})
+
+    # textContent, not innerText: a collapsed disclosure still has to read as
+    # words, and the reader can open it without colour telling them to.
     words = page.evaluate("""
     () => {
-      const t = document.body.innerText;
+      const t = document.body.textContent;
       return {
-        type: ['Risk','Issue','Dependency','Assurance gap'].every(w => t.includes(w)),
-        band: ['critical band','high band','medium band'].some(w => t.includes(w)),
-        movement: ['Worsening','Stable','New','Resolved'].every(w => t.includes(w)),
+        type: ['Assurance gaps','Risks','Issues','Dependencies','Closed'].every(w => t.includes(w)),
+        band: ['Critical','High','Medium'].every(w => t.includes(w)),
+        movement: ['Worsening','New','Resolved'].every(w => t.includes(w)),
         conflict: t.includes('Sources conflict'),
+        management: t.includes('Unmanaged') || t.includes('No owner'),
         blocking: t.includes('Blocking'),
         acceptance: ['Unaccepted','Accepted'].every(w => t.includes(w)),
-        scales: (t.match(/Scale:/g) || []).length
+        alert: t.includes('did not report') && t.includes('unknown, not green'),
+        scales: ['exposure, 1 to 25','impact, 1 to 5','criticality, 1 to 5'].every(w => t.includes(w))
       };
     }""")
     for k, v in words.items():
-        if k == "scales":
-            check(v == 4, "NFR-04 greyscale: four group scales still read", f"{v} found")
-        else:
-            check(bool(v), f"NFR-04 greyscale: {k} still reads as a word")
+        check(bool(v), f"greyscale: {k} still reads as words")
 
 
 def main():
@@ -363,34 +331,45 @@ def main():
     ap.add_argument("--file", action="store_true", help="check the single-file build over file://")
     args = ap.parse_args()
 
-    base = args.base
-    single = False
-    if args.file:
-        base = "file://" + os.path.join(ROOT, "risk-radar.html")
-        single = True
+    base = "file://" + os.path.join(ROOT, "risk-radar.html") if args.file else args.base
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(executable_path=BROWSER)
-        page = browser.new_page(viewport={"width": 1180, "height": 1000})
+        page = browser.new_page(viewport={"width": 660, "height": 1000})
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.on("console", lambda m: errors.append("console." + m.type + ": " + m.text)
                 if m.type == "error" else None)
 
         for week in (1, 2, 3, 4):
-            run_week(page, base, week, single)
+            run_week(page, base, week)
 
         walk_one_item(page, base)
 
-        for width in (320, 390):
+        for width in (320, 390, 660):
             for scheme in ("light", "dark"):
                 print(f"\n--- {width}px {scheme} ---")
                 viewport_checks(page, base, width, scheme)
-        print("\n--- 1180px, both schemes ---")
-        for scheme in ("light", "dark"):
-            viewport_checks(page, base, 1180, scheme)
 
         greyscale_check(page, base)
+
+        print("\n--- surface inventory ---")
+        page.set_viewport_size({"width": 660, "height": 1000})
+        load(page, base, 3)
+        inv = page.evaluate("""
+        () => {
+          const m = {};
+          for (const n of document.querySelectorAll('button,a,input,select,textarea,summary,[role=button]')) {
+            const k = n.tagName.toLowerCase() + '.' + (String(n.className).split(' ')[0] || '-');
+            m[k] = (m[k] || 0) + 1;
+          }
+          return m;
+        }""")
+        for k, v in sorted(inv.items()):
+            print(f"  {v:>4}  {k}")
+        stray = [k for k in inv if not any(
+            k.startswith(p) for p in ("button.weeks__btn", "button.adj__btn", "summary."))]
+        check(not stray, "no control outside the permitted set", str(stray))
 
         check(not errors, "no page errors or console errors", "; ".join(errors[:3]))
         browser.close()

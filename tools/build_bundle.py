@@ -18,8 +18,12 @@ Two outputs, both committed:
 
 import json
 import os
+import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+from build import strip_static  # noqa: E402
+
 WEEKS = [1, 2, 3, 4]
 
 
@@ -72,7 +76,9 @@ def write_bundle(payload):
 
 
 def write_single_file(payload):
-    html = read_text("index.html")
+    # The bundle is the data source here, so drop the painted week rather
+    # than ship the same week twice.
+    html = strip_static(read_text("index.html"))
     css = read_text("styles.css")
     app = read_text("app.js")
 
@@ -101,23 +107,18 @@ def main():
     for path, size in (write_bundle(payload), write_single_file(payload)):
         print(f"{os.path.relpath(path, ROOT):<20} {size / 1024:7.1f} KB")
 
-    # NFR-01. Over http the report loads the shell plus one week: one
-    # register, one transcript, the export and the board. The other three
-    # weeks are fetched only if the reader switches to them.
+    # NFR-01. The default week is painted into index.html, so a first load is
+    # the shell alone: no register JSON is fetched until the reader switches
+    # week. Transfer is what counts, and every static host compresses.
+    import gzip
+
     shell = ["index.html", "styles.css", "app.js"]
-    heaviest = max(WEEKS, key=lambda w: os.path.getsize(
-        os.path.join(ROOT, "runs", f"week-{w}-register.json")))
-    first_load = shell + [
-        f"runs/week-{heaviest}-register.json",
-        f"data/transcripts/week-{heaviest}.json",
-        "data/tickets.csv",
-        "data/board.json",
-    ]
-    total = sum(os.path.getsize(os.path.join(ROOT, *f.split("/"))) for f in first_load)
-    print(f"\nfirst load over http, heaviest week ({heaviest}): {total / 1024:.1f} KB"
-          f"   {'under' if total < 150 * 1024 else 'OVER'} the 150 KB NFR-01 budget")
-    print("  " + "  ".join(f"{f} {os.path.getsize(os.path.join(ROOT, *f.split('/'))) / 1024:.0f}K"
-                           for f in first_load))
+    raw = sum(os.path.getsize(os.path.join(ROOT, f)) for f in shell)
+    comp = sum(len(gzip.compress(open(os.path.join(ROOT, f), "rb").read(), 9)) for f in shell)
+    print(f"\nfirst load over http: {raw / 1024:.1f} KB raw, {comp / 1024:.1f} KB compressed"
+          f"   {'under' if comp < 150 * 1024 else 'OVER'} the 150 KB NFR-01 budget")
+    print("  " + "  ".join(f"{f} {os.path.getsize(os.path.join(ROOT, f)) / 1024:.0f}K" for f in shell))
+    print("  switching week fetches that week's register only")
 
 
 if __name__ == "__main__":

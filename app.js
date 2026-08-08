@@ -18,7 +18,7 @@
       name: "Assurance gaps",
       scale: "Scale: coverage counts — not scored",
       note: "Listed first because a workstream that has not reported has not reported green.",
-      empty: "No assurance gaps this week: every workstream cleared the coverage floor."
+      empty: "No assurance gaps evidenced this week."
     },
     {
       type: "risk",
@@ -271,7 +271,6 @@
         el("dd", {}, [
           el("div", { class: "score__value", text: item.criticality + "/5" }),
           el("div", { class: "score__band", text: CRITICALITY_WORD[item.criticality] }),
-          el("div", { class: "score__terms", text: "started week " + item.week_started }),
           el("div", { class: "score__attention", text: "attention " + c.attention.toFixed(2) + " / 5" })
         ])
       ]);
@@ -318,20 +317,30 @@
       el("dt", { text: "Control" }),
       el("dd", {}, [controlWord(item.control), " · ", el("span", { class: "u-num", text: item.control.score + "/5" })]),
       el("dt", { text: "Sources" }),
-      el("dd", { class: agreement === "disagree" ? "is-alarm" : null }, [
+      el("dd", { class: agreement === "disagree" ? "is-disagree" : null }, [
         el("span", { class: "u-num", text: String(types.length) }),
         " source type" + (types.length === 1 ? "" : "s") + " · " + agreement
       ]),
       el("dd", { text: types.join(" · ") })
     ]);
-
-    if (item.type === "dependency") {
-      append(dl, [
-        el("dt", { text: "Counterparty" }),
-        el("dd", { text: wsLabel(item.waiting_workstream) + " waits on " + wsLabel(item.counterparty) })
-      ]);
-    }
+    // A dependency's two parties are stated in the title and again in the
+    // fact line in column one, per the design plan's row anatomy. Repeating
+    // them a third time here only made the tallest column taller.
     return dl;
+  }
+
+  /* Design plan, dependency row: the waiting party, the counterparty and the
+     week the wait started sit under the statement in column one. */
+  function factsLine(item) {
+    if (item.type !== "dependency") return null;
+    return el("p", { class: "row__facts" }, [
+      el("span", { class: "row__facts-k", text: "waiting " }),
+      wsLabel(item.waiting_workstream),
+      el("span", { class: "row__facts-k", text: " · counterparty " }),
+      wsLabel(item.counterparty),
+      el("span", { class: "row__facts-k", text: " · started " }),
+      el("span", { class: "u-num", text: "W" + item.week_started })
+    ]);
   }
 
   function controlWord(control) {
@@ -592,7 +601,7 @@
 
   // ── acceptance controls (RPT-07) ─────────────────────────────────────
 
-  function adjudicateBlock(item, week, rerender) {
+  function adjudicateBlock(item, week) {
     var acc = acceptanceFor(week, item);
     var fs = el("fieldset", { class: "row__adjudicate" });
     fs.appendChild(el("legend", { class: "u-sr", text: "Adjudicate " + item.id }));
@@ -607,26 +616,17 @@
     /* Amending and rejecting each need a written note, captured inline rather
        than in a modal: a dialog is unavailable in a sandboxed frame, and the
        note belongs beside the row it changes. */
-    var noteForm = el("div", { class: "adj__form", hidden: true });
 
     var buttons = el("div", { class: "adj__buttons" });
     [["accepted", "Accept"], ["amended", "Amend"], ["rejected", "Reject"]].forEach(function (pair) {
       var state = pair[0];
-      var btn = el("button", {
+      buttons.appendChild(el("button", {
         type: "button",
         class: "adj__btn",
+        "data-act": state,
         "aria-pressed": acc.state === state ? "true" : "false",
         text: pair[1]
-      });
-      btn.addEventListener("click", function () {
-        if (state === "accepted") {
-          setAcceptance(week, item, state, null);
-          rerender();
-          return;
-        }
-        openNoteForm(noteForm, state, item, week, acc, rerender);
-      });
-      buttons.appendChild(btn);
+      }));
     });
     fs.appendChild(buttons);
 
@@ -635,15 +635,18 @@
         acc.state === "amended" ? "Amendment: " : "Reason: ", acc.note
       ]));
     }
-    fs.appendChild(noteForm);
+    fs.appendChild(el("div", { class: "adj__form", hidden: true }));
     return fs;
   }
 
-  function openNoteForm(host, state, item, week, acc, rerender) {
+  function openNoteForm(row, state) {
+    var host = row.querySelector(".adj__form");
+    var itemId = row.id.replace("item-", "");
+    var acc = acceptanceFromRow(row);
     clear(host);
     host.hidden = false;
 
-    var id = "note-" + state + "-" + item.id;
+    var id = "note-" + state + "-" + itemId;
     var label = state === "amended"
       ? "Amendment. The run's own wording is kept and struck through; it is never erased."
       : "Reason for rejection. The row stays on the record with the reason attached.";
@@ -658,9 +661,9 @@
 
     function commit() {
       var text = input.value.trim();
-      setAcceptance(week, item, state, text ||
+      setAcceptance(currentWeek, { id: itemId }, state, text ||
         (state === "amended" ? "Amended without a note." : "Rejected without a stated reason."));
-      rerender();
+      refreshRow(row);
     }
 
     var save = el("button", { type: "button", class: "adj__btn", text: "Save" });
@@ -682,7 +685,7 @@
 
   // ── row ──────────────────────────────────────────────────────────────
 
-  function rowNode(item, week, rerender) {
+  function rowNode(item, week) {
     var acc = acceptanceFor(week, item);
     var alarm = (item.contradiction && item.contradiction.present) ||
                 (item.type === "dependency" && item.blocking) ||
@@ -698,7 +701,6 @@
 
     var head = el("header", { class: "row__head" }, [el("span", { class: "row__id", text: item.id })]);
     chipsFor(item, acc).forEach(function (c) { head.appendChild(c); });
-    article.appendChild(head);
 
     var titleWrap = el("div", { class: "row__title" }, [
       el("h4", { text: item.title }),
@@ -709,30 +711,36 @@
         "The run said: ", el("del", { text: item.statement })
       ]));
     }
-    article.appendChild(titleWrap);
+
+    // Identity, title and quote are one column, not three grid rows a tall
+    // score or meta column can inflate. Below 900px .row__main becomes
+    // display:contents so these three can be reordered around the score and
+    // meta bands, per the design plan's collapse order.
+    var facts = factsLine(item);
+    if (facts) titleWrap.appendChild(facts);
+    var main = el("div", { class: "row__main" }, [head, titleWrap]);
+    var q = quoteBlock(item);
+    if (q) main.appendChild(q);
+    article.appendChild(main);
 
     article.appendChild(scoreBlock(item));
     article.appendChild(metaBlock(item));
 
-    // An item with no transcript source simply leaves the quote grid area
-    // empty; the area collapses on its own and needs no placeholder.
-    var q = quoteBlock(item);
-    if (q) article.appendChild(q);
-
     var details = el("details", { class: "row__evidence" }, [
       el("summary", { text: "Evidence & arithmetic" })
     ]);
-    var built = false;
-    details.addEventListener("toggle", function () {
-      if (details.open && !built) {
-        details.appendChild(evidencePanel(item, week));
-        details.appendChild(arithmeticPanel(item));
-        built = true;
-      }
-    });
+    /* Built up front so the panels are in the document rather than waiting on
+       a click: <details> needs no JavaScript to open, so a reader without it
+       still reaches the evidence. */
+    details.appendChild(evidencePanel(item, week));
+    details.appendChild(arithmeticPanel(item));
     article.appendChild(details);
 
-    article.appendChild(adjudicateBlock(item, week, rerender));
+    article.appendChild(adjudicateBlock(item, week));
+    /* The run's own acceptance travels with the row, so a page that was
+       painted server-side can be adjudicated before any JSON has loaded. */
+    article.setAttribute("data-acc", JSON.stringify(item.acceptance));
+    article.setAttribute("data-statement", item.statement);
     return article;
   }
 
@@ -767,14 +775,13 @@
   function renderWeekbar() {
     var bar = clear(document.getElementById("weekbar"));
     WEEKS.forEach(function (w) {
-      var btn = el("button", {
+      bar.appendChild(el("button", {
         type: "button",
         class: "weekbar__btn",
+        "data-week": w,
         "aria-current": w === currentWeek ? "true" : "false",
         text: "W" + w
-      });
-      btn.addEventListener("click", function () { goToWeek(w); });
-      bar.appendChild(btn);
+      }));
     });
     document.getElementById("weekbar-date").textContent = data.registers[currentWeek].date;
   }
@@ -797,15 +804,14 @@
       strip.appendChild(stat);
     });
 
+    strip.appendChild(el("button", {
+      type: "button", class: "coverage__more",
+      "aria-expanded": "false", "aria-controls": "coverage-detail",
+      text: "Coverage & gaps"
+    }));
     var detail = document.getElementById("coverage-detail");
-    var btn = el("button", { type: "button", class: "coverage__more", text: "Coverage & gaps" });
-    btn.addEventListener("click", function () {
-      detail.hidden = !detail.hidden;
-      btn.setAttribute("aria-expanded", String(!detail.hidden));
-      if (!detail.hidden) renderCoverageDetail(reg, detail);
-    });
-    btn.setAttribute("aria-expanded", "false");
-    strip.appendChild(btn);
+    clear(detail);
+    renderCoverageDetail(reg, detail);
     detail.hidden = true;
   }
 
@@ -869,7 +875,7 @@
           el("span", { text: "Evidence & state" })
         ]));
         items.forEach(function (item) {
-          section.appendChild(rowNode(item, reg.week, function () { render(); }));
+          section.appendChild(rowNode(item, reg.week));
         });
       }
       main.appendChild(section);
@@ -886,6 +892,8 @@
   function renderOmissions(reg) {
     var section = document.getElementById("omissions");
     var list = clear(document.getElementById("omissions-list"));
+    var count = document.getElementById("omissions-count");
+    if (count) count.textContent = String(reg.gaps.length);
     section.hidden = reg.gaps.length === 0;
     reg.gaps.forEach(function (g) { list.appendChild(gapNode(g)); });
   }
@@ -1011,7 +1019,92 @@
     }));
   }
 
-  function start() { show(weekFromHash() || 3); }
+  // ── delegation and hydration ─────────────────────────────────────────
+
+  /* Every control is reached by delegation, so the same handlers drive markup
+     built here and markup shipped in the HTML. Nothing needs re-wiring after
+     a static first paint. */
+  function bindControls() {
+    document.addEventListener("click", function (e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      var wk = t.closest(".weekbar__btn");
+      if (wk) { goToWeek(Number(wk.getAttribute("data-week"))); return; }
+      var cov = t.closest(".coverage__more");
+      if (cov) {
+        var detail = document.getElementById("coverage-detail");
+        detail.hidden = !detail.hidden;
+        cov.setAttribute("aria-expanded", String(!detail.hidden));
+        return;
+      }
+      var adj = t.closest(".adj__btn[data-act]");
+      if (adj) {
+        var row = adj.closest(".row");
+        var act = adj.getAttribute("data-act");
+        if (act === "accepted") {
+          setAcceptance(currentWeek, { id: row.id.replace("item-", "") }, act, null);
+          refreshRow(row);
+        } else {
+          openNoteForm(row, act);
+        }
+      }
+    });
+  }
+
+  function acceptanceFromRow(row) {
+    var override = acceptance[currentWeek + ":" + row.id.replace("item-", "")];
+    if (override) return override;
+    try { return JSON.parse(row.getAttribute("data-acc")); } catch (e) { return { state: "unaccepted" }; }
+  }
+
+  /* Repaint one row's acceptance rather than the register, so an adjudication
+     never destroys the rest of the page or needs the week's JSON. */
+  function refreshRow(row) {
+    var acc = acceptanceFromRow(row);
+    var statement = row.getAttribute("data-statement") || "";
+    var fs = row.querySelector(".row__adjudicate");
+    var fresh = adjudicateBlock(
+      { id: row.id.replace("item-", ""), acceptance: acc, statement: statement },
+      currentWeek
+    );
+    row.replaceChild(fresh, fs);
+
+    row.classList.toggle("is-rejected", acc.state === "rejected");
+    var title = row.querySelector(".row__title");
+    var struck = title.querySelector(".adj__note");
+    if (struck) title.removeChild(struck);
+    if (acc.state === "amended" && acc.note) {
+      title.appendChild(el("p", { class: "adj__note" }, ["The run said: ", el("del", { text: statement })]));
+    }
+    refreshUnacceptedCount();
+  }
+
+  function refreshUnacceptedCount() {
+    var rows = document.querySelectorAll(".row");
+    var n = 0;
+    Array.prototype.forEach.call(rows, function (r) {
+      if (acceptanceFromRow(r).state === "unaccepted") n += 1;
+    });
+    var dd = document.querySelectorAll("#masthead-counts dd");
+    var last = dd[dd.length - 1];
+    if (!last) return;
+    var nums = last.querySelectorAll(".u-num");
+    if (nums.length === 2) nums[1].textContent = String(n);
+  }
+
+  /* A page painted at build time is already correct: adopt it rather than
+     rebuild it, and skip the fetch its week would otherwise need. */
+  function staticWeek() {
+    var v = document.body.getAttribute("data-static-week");
+    return v ? Number(v) : null;
+  }
+
+  function start() {
+    bindControls();
+    var week = weekFromHash() || staticWeek() || 3;
+    if (staticWeek() === week) { currentWeek = week; return; }
+    show(week);
+  }
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", start);

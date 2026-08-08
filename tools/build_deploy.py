@@ -27,8 +27,12 @@ import json
 import os
 import re
 import shutil
+import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+from build import strip_static  # noqa: E402
+
 DIST = os.path.join(ROOT, "dist")
 WEEKS = [1, 2, 3, 4]
 
@@ -97,7 +101,7 @@ def build():
     text = json.dumps(payload(), ensure_ascii=False, separators=(",", ":"))
     blob = base64.b64encode(gzip.compress(text.encode("utf-8"), 9)).decode("ascii")
 
-    html = read("index.html")
+    html = strip_static(read("index.html"))
     html = html.replace(
         '<link rel="stylesheet" href="styles.css">',
         '<link rel="stylesheet" href="styles.css">',

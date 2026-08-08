@@ -1,0 +1,62 @@
+{
+  "programme": "Programme Meridian",
+  "note": "Reported RAG status per workstream per week, as published to the steering group. This is a reported record, not an observed one. It is one source among three and is not privileged.",
+  "workstreams": {
+    "platform": "Platform",
+    "integration": "Integration",
+    "data-migration": "Data migration",
+    "reporting": "Reporting",
+    "test": "Test",
+    "adoption": "Adoption"
+  },
+  "weeks": [
+    {
+      "week": 1,
+      "date": "2026-07-13",
+      "status": {
+        "platform": "green",
+        "integration": "green",
+        "data-migration": "amber",
+        "reporting": "green",
+        "test": "green",
+        "adoption": "green"
+      }
+    },
+    {
+      "week": 2,
+      "date": "2026-07-20",
+      "status": {
+        "platform": "green",
+        "integration": "green",
+        "data-migration": "amber",
+        "reporting": "green",
+        "test": "amber",
+        "adoption": "green"
+      }
+    },
+    {
+      "week": 3,
+      "date": "2026-07-27",
+      "status": {
+        "platform": "green",
+        "integration": "green",
+        "data-migration": "green",
+        "reporting": "green",
+        "test": "amber",
+        "adoption": "green"
+      }
+    },
+    {
+      "week": 4,
+      "date": "2026-08-03",
+      "status": {
+        "platform": "amber",
+        "integration": "amber",
+        "data-migration": "green",
+        "reporting": "green",
+        "test": "amber",
+        "adoption": "amber"
+      }
+    }
+  ]
+}

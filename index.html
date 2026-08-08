@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Risk Radar — delivery register</title>
+<meta name="description" content="A weekly delivery register drafted from the meeting transcript, the ticket export and the reported RAG board, where every item cites its evidence.">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23FBFAF6'/><rect x='2' y='2' width='2' height='12' fill='%23A32E12'/><rect x='6' y='4' width='8' height='1.5' fill='%2317170F'/><rect x='6' y='8' width='6' height='1.5' fill='%23C9C4B4'/><rect x='6' y='11' width='7' height='1.5' fill='%23C9C4B4'/></svg>">
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="masthead__rail">
+      <span>Programme Meridian &middot; delivery register</span>
+      <span>Draft, pending adjudication</span>
+    </div>
+    <h1 class="masthead__title">The register, as a document of record</h1>
+    <p class="masthead__sub">Drafted from the weekly meeting transcript, the ticket export and the reported RAG board. Every item is typed before it is scored, cites its sources, and states where those sources disagree. Nothing here is accepted until a human accepts it.</p>
+    <dl class="masthead__counts u-label" id="masthead-counts"></dl>
+  </header>
+
+  <nav class="weekbar" aria-label="Week">
+    <div class="weekbar__set" id="weekbar" role="group" aria-label="Choose a week"></div>
+    <span class="weekbar__date u-num" id="weekbar-date"></span>
+  </nav>
+
+  <section aria-label="Coverage">
+    <dl class="coverage" id="coverage"></dl>
+    <div id="coverage-detail" hidden></div>
+  </section>
+
+  <p class="banner" id="session-banner">
+    Acceptance is recorded for this browser session only. It is held in
+    <span class="u-num">sessionStorage</span> and restored on reload; closing the tab clears it.
+    The prototype demonstrates the adjudication loop without pretending to persist it.
+  </p>
+
+  <noscript>
+    <p class="banner">The register itself is rendered from the committed run data by
+    <span class="u-num">app.js</span>. Without JavaScript the four week files under
+    <span class="u-num">runs/</span> are still readable directly, and they are the
+    complete record: the report adds layout, not content.</p>
+  </noscript>
+
+  <main id="register" aria-live="polite"></main>
+
+  <section class="omissions" id="omissions" hidden>
+    <h2 class="group__name">Omitted from this register</h2>
+    <p class="group__note">Findings that could not be traced to a source this week. They are named here with a reason rather than carried forward on last week's quote.</p>
+    <div class="omissions__list" id="omissions-list"></div>
+  </section>
+
+  <footer class="foot">
+    <p>Two prompt passes, extract-and-classify then score, run offline. The model emits factor scores against written anchors; every total, band, ordering and movement state is computed in code by <span class="u-num">score.py</span>, so the arithmetic is reproducible and the same week ranks the same way every time.</p>
+    <p>All content is self-created. No real organisation, client, colleague or project appears, and speakers are role labels only. There is no model call at view time, no server component, no credentials, and no request to any origin but this one.</p>
+  </footer>
+
+</div>
+<!-- Over http the report reads runs/week-N-register.json for the week being
+     viewed, one week at a time. From file:// it loads data.bundle.js, which
+     carries the same data inlined. app.js decides which; neither reaches
+     another origin. -->
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "week": 4,
+  "date": "2026-08-03",
+  "meeting": "Weekly delivery review",
+  "programme": "Programme Meridian",
+  "duration_seconds": 2700,
+  "note": "Speakers are role labels. Adoption attended after two weeks absent.",
+  "airtime_seconds": {
+    "platform": 540,
+    "integration": 500,
+    "data-migration": 400,
+    "reporting": 480,
+    "test": 430,
+    "adoption": 300
+  },
+  "lines": [
+    { "line": 1, "timestamp": "00:00:11", "speaker": "Delivery manager", "workstream": null, "text": "Week four, last of the window. Adoption are back, we will come to you properly. Platform first, contract." },
+    { "line": 2, "timestamp": "00:01:05", "speaker": "Platform lead", "workstream": "platform", "text": "Versioning is answered. The contract is not published yet. I am not going to give you a date I cannot hold, so I will say it is close and leave it there." },
+    { "line": 3, "timestamp": "00:02:50", "speaker": "Delivery manager", "workstream": null, "text": "That is a fourth week without it." },
+    { "line": 4, "timestamp": "00:03:30", "speaker": "Integration lead", "workstream": "integration", "text": "Four weeks. Field mapping has now not moved since the sixth of July. That is four weeks of nothing on the critical path." },
+    { "line": 5, "timestamp": "00:05:00", "speaker": "Integration lead", "workstream": "integration", "text": "I have stopped the team writing against stubs. It is rework we would throw away." },
+    { "line": 6, "timestamp": "00:06:40", "speaker": "Programme architect", "workstream": "integration", "text": "I signed off versioning on Wednesday. Publication is a platform action now, and it is the only thing standing between integration and moving." },
+    { "line": 7, "timestamp": "00:08:15", "speaker": "Delivery manager", "workstream": null, "text": "Platform, is there anything other than time in the way?" },
+    { "line": 8, "timestamp": "00:08:40", "speaker": "Platform lead", "workstream": "platform", "text": "No. It is capacity. Rate limiting and the ingress work took the week." },
+    { "line": 9, "timestamp": "00:10:20", "speaker": "Data migration lead", "workstream": "data-migration", "text": "Apologies for last week, I was double-booked. Integrity fixes are in progress, dry run two is loaded, load-step tuning has started." },
+    { "line": 10, "timestamp": "00:12:05", "speaker": "Data migration lead", "workstream": "data-migration", "text": "Rollback rehearsal now has an owner. It is mine, and I have the twenty-first of August against it." },
+    { "line": 11, "timestamp": "00:13:30", "speaker": "Delivery manager", "workstream": null, "text": "Good. That has been open three weeks and it is the first time it has had a name and a date." },
+    { "line": 12, "timestamp": "00:15:00", "speaker": "Data migration lead", "workstream": "data-migration", "text": "The cutover runbook is drafting. The reconciliation report is still untouched." },
+    { "line": 13, "timestamp": "00:16:40", "speaker": "Reporting lead", "workstream": "reporting", "text": "Reporting is green. Usage instrumentation moved, everything else is progressing." },
+    { "line": 14, "timestamp": "00:18:00", "speaker": "Delivery manager", "workstream": null, "text": "How many open items do you have now against how many you closed this week?" },
+    { "line": 15, "timestamp": "00:18:20", "speaker": "Reporting lead", "workstream": "reporting", "text": "I would have to look. It feels manageable." },
+    { "line": 16, "timestamp": "00:20:10", "speaker": "Test lead", "workstream": "test", "text": "Environment provisioning is in progress. Performance baseline went to review. UAT cycle two schedule is now a ticket, still open." },
+    { "line": 17, "timestamp": "00:22:00", "speaker": "Test lead", "workstream": "test", "text": "Regression pack and the non-functional plan have still not moved. Four weeks. I am not going to pretend otherwise." },
+    { "line": 18, "timestamp": "00:23:40", "speaker": "Delivery manager", "workstream": null, "text": "Owner and date on both of those, please, before the next board." },
+    { "line": 19, "timestamp": "00:24:05", "speaker": "Test lead", "workstream": "test", "text": "Mine and mine. I will have dates on both by Friday." },
+    { "line": 20, "timestamp": "00:25:50", "speaker": "Adoption lead", "workstream": "adoption", "text": "Two weeks missed, that is on me. Where we actually are: the user guide is drafting, the go-live pack has started this week." },
+    { "line": 21, "timestamp": "00:27:30", "speaker": "Adoption lead", "workstream": "adoption", "text": "Training needs analysis is still open. It has been open since the thirtieth of June and nothing has moved on it." },
+    { "line": 22, "timestamp": "00:29:00", "speaker": "Delivery manager", "workstream": null, "text": "Is go-live achievable on the adoption side?" },
+    { "line": 23, "timestamp": "00:29:25", "speaker": "Adoption lead", "workstream": "adoption", "text": "Assuming the training analysis closes in the next fortnight, yes. If it does not, no." },
+    { "line": 24, "timestamp": "00:31:10", "speaker": "Programme architect", "workstream": null, "text": "Worth saying that the contract, the environment and the training analysis are all the same shape. Owned in name, unmoved in practice." },
+    { "line": 25, "timestamp": "00:33:00", "speaker": "Delivery manager", "workstream": null, "text": "Agreed. Board this afternoon. Platform and integration both go amber, adoption goes amber, and I will explain reporting to the steering group myself." }
+  ]
+}

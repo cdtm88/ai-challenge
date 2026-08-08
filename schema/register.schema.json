@@ -1,0 +1,374 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.invalid/risk-radar/register.schema.json",
+  "title": "Risk Radar weekly register",
+  "description": "The output contract for one week's register (ING-06). Type determines which scoring fields are permitted: emitting likelihood, exposure or proximity at item level on anything other than a risk is a validation failure (CLS-02). The attention_factors block is a separate scoring record required on every type by SCO-02; it is not an item-level risk field and CLS-02 does not reach it.",
+  "type": "object",
+  "required": ["week", "date", "pass", "generated_by", "coverage", "items", "gaps"],
+  "additionalProperties": false,
+  "properties": {
+    "week": { "type": "integer", "minimum": 1, "maximum": 4 },
+    "date": { "type": "string", "format": "date" },
+    "programme": { "type": "string" },
+    "pass": { "const": "2-score" },
+    "generated_by": { "type": "string" },
+    "prior_register": { "type": ["string", "null"] },
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "coverage": { "$ref": "#/definitions/coverage" },
+    "items": { "type": "array", "items": { "$ref": "#/definitions/item" } },
+    "gaps": {
+      "type": "array",
+      "description": "EVI-05. Anything untraceable to a source this week, named with a reason rather than carried forward on last week's quote.",
+      "items": {
+        "type": "object",
+        "required": ["ref", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "ref": { "type": "string" },
+          "subject": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  },
+
+  "definitions": {
+    "coverage": {
+      "type": "object",
+      "description": "RPT-08. Derived from data/ by tools/corpus_stats.py, not asserted by the model.",
+      "required": [
+        "meeting_duration_seconds",
+        "airtime_seconds",
+        "airtime_total_seconds",
+        "transitions",
+        "transitions_total",
+        "workstreams_reporting",
+        "workstreams_total",
+        "unverified_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "meeting_duration_seconds": { "type": "integer", "minimum": 0 },
+        "airtime_seconds": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "airtime_total_seconds": { "type": "integer", "minimum": 0 },
+        "transitions": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "transitions_total": { "type": "integer", "minimum": 0 },
+        "opened": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "closed": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "workstreams_reporting": { "type": "integer", "minimum": 0 },
+        "workstreams_total": { "type": "integer", "minimum": 1 },
+        "unverified_count": { "type": "integer", "minimum": 0 },
+        "board": { "type": "object", "additionalProperties": { "enum": ["green", "amber", "red"] } }
+      }
+    },
+
+    "item": {
+      "type": "object",
+      "required": [
+        "id", "lineage", "type", "title", "statement", "workstream",
+        "owner", "sources", "control", "attention_factors",
+        "movement", "acceptance", "computed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^(RK|IS|DP|AG)-[0-9]{2}$" },
+        "lineage": {
+          "type": "string",
+          "description": "Stable across weeks and across reclassification. Movement is matched on this, not on id or prose.",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "type": { "enum": ["risk", "issue", "dependency", "assurance-gap"] },
+        "title": { "type": "string", "minLength": 4 },
+        "statement": { "type": "string", "minLength": 10 },
+        "workstream": { "type": "string" },
+        "owner": {
+          "type": "object",
+          "required": ["role", "stated"],
+          "additionalProperties": false,
+          "properties": {
+            "role": { "type": ["string", "null"], "description": "Role label, never a name. Null means unowned; owners are never invented (SCO-06)." },
+            "stated": { "type": "boolean" },
+            "basis": { "type": "string" }
+          }
+        },
+        "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/source" } },
+
+        "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "likelihood": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "proximity": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "criticality": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "counterparty": { "type": "string" },
+        "waiting_workstream": { "type": "string" },
+        "week_started": { "type": "integer", "minimum": 1 },
+        "blocking": { "type": "boolean" },
+        "coverage": { "$ref": "#/definitions/gapCoverage" },
+        "resolved": {
+          "type": "boolean",
+          "description": "Model-emitted. True when this item is evidenced as closed this week; score.py turns it into movement.state = resolved."
+        },
+
+        "control": {
+          "type": "object",
+          "required": ["stated", "score"],
+          "additionalProperties": false,
+          "properties": {
+            "stated": { "type": "boolean" },
+            "text": { "type": ["string", "null"], "description": "Captured verbatim in substance. Mitigations are never generated (SCO-07)." },
+            "owner": { "type": ["string", "null"] },
+            "date": { "type": ["string", "null"] },
+            "score": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "anchor": { "type": "string" }
+          }
+        },
+
+        "attention_factors": {
+          "type": "object",
+          "required": ["proximity", "blast_radius", "control_status", "evidence_confidence"],
+          "additionalProperties": false,
+          "properties": {
+            "proximity": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "blast_radius": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "control_status": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "evidence_confidence": { "enum": [1, 2, 5] },
+            "anchors": { "type": "object", "additionalProperties": { "type": "string" } }
+          }
+        },
+
+        "detection": {
+          "type": "object",
+          "description": "Set where the item was raised by one of the three EVI-04 detections running over the export alone, with no spoken mention needed.",
+          "required": ["rule", "export_only"],
+          "additionalProperties": false,
+          "properties": {
+            "rule": { "enum": ["staleness", "scope-growth", "progress-claimed-no-transition"] },
+            "export_only": { "type": "boolean", "description": "True when nobody raised this in the room." },
+            "note": { "type": "string" }
+          }
+        },
+
+        "hedge": {
+          "type": "object",
+          "required": ["present"],
+          "additionalProperties": false,
+          "properties": {
+            "present": { "type": "boolean" },
+            "terms": { "type": "array", "items": { "type": "string" } },
+            "quote": { "type": "string" },
+            "cap_applied": { "type": "boolean", "description": "SCO-08. True when likelihood was held at 3 because the only supporting evidence is hedged." }
+          }
+        },
+
+        "contradiction": {
+          "type": "object",
+          "required": ["present"],
+          "additionalProperties": false,
+          "properties": {
+            "present": { "type": "boolean" },
+            "statement": { "type": "string" },
+            "source_types": { "type": "array", "items": { "enum": ["transcript", "ticket", "board", "metadata"] } },
+            "precedence": { "enum": ["ticket", "transcript", "board"] },
+            "routed_to": { "type": "string" }
+          }
+        },
+
+        "reclassified": {
+          "type": "object",
+          "required": ["week", "from_type", "trigger"],
+          "additionalProperties": false,
+          "properties": {
+            "week": { "type": "integer", "minimum": 1 },
+            "from_type": { "enum": ["risk", "issue", "dependency", "assurance-gap"] },
+            "from_id": { "type": "string" },
+            "trigger": { "type": "string" }
+          }
+        },
+
+        "movement": {
+          "type": "object",
+          "required": ["state"],
+          "additionalProperties": false,
+          "properties": {
+            "state": { "enum": ["new", "worsening", "improving", "stable", "resolved", "returned", "reclassified"] },
+            "measure": { "type": ["string", "null"] },
+            "from": { "type": ["number", "null"] },
+            "to": { "type": ["number", "null"] },
+            "note": { "type": ["string", "null"] },
+            "weeks_waiting": { "type": "integer", "minimum": 0 }
+          }
+        },
+
+        "acceptance": {
+          "type": "object",
+          "required": ["state"],
+          "additionalProperties": false,
+          "properties": {
+            "state": { "enum": ["unaccepted", "accepted", "amended", "rejected"] },
+            "by": { "type": ["string", "null"] },
+            "at": { "type": ["string", "null"] },
+            "note": { "type": ["string", "null"] },
+            "carried_from_week": { "type": ["integer", "null"] }
+          }
+        },
+
+        "computed": {
+          "type": "object",
+          "description": "Written by score.py from the factor scores above. The model never emits these (SCO-03).",
+          "required": ["attention", "attention_terms", "rank"],
+          "additionalProperties": false,
+          "properties": {
+            "exposure": { "type": "integer", "minimum": 1, "maximum": 25 },
+            "band": { "enum": ["critical", "high", "medium", "low"] },
+            "attention": { "type": "number", "minimum": 0, "maximum": 5 },
+            "attention_terms": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["factor", "score", "weight", "product"],
+                "additionalProperties": false,
+                "properties": {
+                  "factor": { "type": "string" },
+                  "score": { "type": "number" },
+                  "weight": { "type": "number" },
+                  "product": { "type": "number" }
+                }
+              }
+            },
+            "rank": { "type": "integer", "minimum": 1 },
+            "group_rank": { "type": "integer", "minimum": 1 }
+          }
+        }
+      },
+
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "risk" } }, "required": ["type"] },
+          "then": {
+            "required": ["impact", "likelihood", "proximity", "control"],
+            "properties": { "computed": { "required": ["exposure", "band", "attention", "attention_terms", "rank"] } },
+            "not": { "anyOf": [
+              { "required": ["criticality"] },
+              { "required": ["counterparty"] },
+              { "required": ["blocking"] },
+              { "required": ["coverage"] }
+            ] }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "issue" } }, "required": ["type"] },
+          "then": {
+            "required": ["impact"],
+            "not": { "anyOf": [
+              { "required": ["likelihood"] },
+              { "required": ["proximity"] },
+              { "required": ["criticality"] },
+              { "required": ["blocking"] },
+              { "required": ["coverage"] }
+            ] },
+            "properties": { "computed": { "not": { "anyOf": [
+              { "required": ["exposure"] },
+              { "required": ["band"] }
+            ] } } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "dependency" } }, "required": ["type"] },
+          "then": {
+            "required": ["criticality", "counterparty", "waiting_workstream", "week_started", "blocking"],
+            "not": { "anyOf": [
+              { "required": ["likelihood"] },
+              { "required": ["proximity"] },
+              { "required": ["impact"] },
+              { "required": ["coverage"] }
+            ] },
+            "properties": { "computed": { "not": { "anyOf": [
+              { "required": ["exposure"] },
+              { "required": ["band"] }
+            ] } } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "assurance-gap" } }, "required": ["type"] },
+          "then": {
+            "required": ["coverage"],
+            "not": { "anyOf": [
+              { "required": ["likelihood"] },
+              { "required": ["proximity"] },
+              { "required": ["impact"] },
+              { "required": ["criticality"] },
+              { "required": ["blocking"] }
+            ] },
+            "properties": { "computed": { "not": { "anyOf": [
+              { "required": ["exposure"] },
+              { "required": ["band"] }
+            ] } } }
+          }
+        }
+      ]
+    },
+
+    "gapCoverage": {
+      "type": "object",
+      "description": "Assurance gaps carry counts, not scores (PRD section 5, Coverage).",
+      "required": ["airtime_seconds", "transitions"],
+      "additionalProperties": false,
+      "properties": {
+        "airtime_seconds": { "type": "integer", "minimum": 0 },
+        "transitions": { "type": "integer", "minimum": 0 },
+        "carried_unverifiable": { "type": "integer", "minimum": 0 },
+        "downstream_unconfirmed": { "type": "integer", "minimum": 0 },
+        "weeks_absent": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "source": {
+      "type": "object",
+      "required": ["type"],
+      "oneOf": [
+        {
+          "properties": {
+            "type": { "const": "transcript" },
+            "week": { "type": "integer" },
+            "line": { "type": "integer" },
+            "timestamp": { "type": "string" },
+            "speaker": { "type": "string" },
+            "quote": { "type": "string" }
+          },
+          "required": ["type", "week", "line", "speaker", "quote"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "type": { "const": "ticket" },
+            "ticket_id": { "type": "string" },
+            "field": { "type": "string" },
+            "value": { "type": "string" },
+            "observation": { "type": "string" }
+          },
+          "required": ["type", "ticket_id", "field", "value", "observation"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "type": { "const": "board" },
+            "workstream": { "type": "string" },
+            "status": { "enum": ["green", "amber", "red"] },
+            "date": { "type": "string" },
+            "observation": { "type": "string" }
+          },
+          "required": ["type", "workstream", "status", "date"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "type": { "const": "metadata" },
+            "measure": { "type": "string" },
+            "value": { "type": "string" },
+            "observation": { "type": "string" }
+          },
+          "required": ["type", "measure", "value", "observation"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

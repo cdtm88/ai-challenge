@@ -215,7 +215,7 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 
 .colheads {
   display: grid;
-  grid-template-columns: 1fr 168px 150px;
+  grid-template-columns: minmax(0, 1fr) 168px minmax(150px, 210px);
   column-gap: var(--s5);
   padding: var(--s2) 0;
   border-bottom: 1px solid var(--rule-faint);
@@ -228,19 +228,30 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 
 /* ── row ────────────────────────────────────────────────────────────── */
 
+/* The three columns are independent heights. Column one is a single cell, not
+   three rows a tall neighbour can inflate: when score and meta spanned rows,
+   a long meta column stranded up to 212px of empty space between the quote
+   and the disclosure. align-items: start keeps every column at its own
+   content height, so the row is only as tall as its tallest column. */
 .row {
   display: grid;
-  grid-template-columns: 1fr 168px 150px;
+  grid-template-columns: minmax(0, 1fr) 168px minmax(150px, 210px);
   grid-template-areas:
-    "head  score meta"
-    "title score meta"
-    "quote score meta"
-    "evid  evid  evid"
-    "adj   adj   adj";
+    "main score meta"
+    "evid evid evid"
+    "adj  adj  adj";
+  align-items: start;
   column-gap: var(--s5);
   row-gap: var(--s2);
   padding: var(--s4) var(--s5);
   border-bottom: 1px solid var(--rule-faint);
+}
+.row__main {
+  grid-area: main;
+  display: grid;
+  align-content: start;
+  gap: var(--s2);
+  min-width: 0;
 }
 .row.is-alarm {
   border-inline-start: 3px solid var(--alarm);
@@ -250,7 +261,7 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .row.is-rejected .row__title { text-decoration: line-through; }
 .row.is-resolved { opacity: 0.72; }
 
-.row__head { grid-area: head; display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+.row__head { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
 .row__id {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
@@ -258,11 +269,12 @@ button { font: inherit; color: inherit; background: none; border: 0; }
   letter-spacing: 0.08em;
   color: var(--ink-3);
 }
-.row__title { grid-area: title; font-size: 17px; line-height: 1.35; max-width: 66ch; text-wrap: pretty; }
+.row__title { font-size: 17px; line-height: 1.35; max-width: 66ch; text-wrap: pretty; }
 .row__statement { color: var(--ink-2); font-size: 15px; line-height: 1.5; max-width: 66ch; }
+.row__facts { margin-top: var(--s2); font-family: var(--font-label); font-size: 12.5px; color: var(--ink-2); }
+.row__facts-k { color: var(--ink-3); }
 .row__quote {
-  grid-area: quote;
-  margin: var(--s2) 0 0;
+  margin: 0;
   padding-inline-start: var(--s3);
   border-inline-start: 1px solid var(--rule);
   max-width: 74ch;
@@ -272,7 +284,7 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .row__quote cite { display: block; margin-top: var(--s1); color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; font-style: normal; }
 .row__quote mark { background: var(--hedge); color: var(--ink); padding: 0 2px; }
 
-.row__score { grid-area: score; align-self: start; }
+.row__score { grid-area: score; }
 .score__value { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 500; line-height: 1.15; }
 .score__value.is-critical { color: var(--alarm); }
 .score__band { font-family: var(--font-label); font-size: 12.5px; letter-spacing: 0.06em; color: var(--ink-2); }
@@ -282,10 +294,12 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .score__counts div { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--ink-2); }
 .score__counts b { font-weight: 500; }
 
-.row__meta { grid-area: meta; align-self: start; display: grid; gap: var(--s2); }
+.row__meta { grid-area: meta; display: grid; gap: var(--s2); min-width: 0; }
 .row__meta dt { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; }
 .row__meta dd { font-family: var(--font-label); font-size: 12.5px; color: var(--ink-2); line-height: 1.4; }
-.row__meta dd.is-alarm { color: var(--alarm); }
+/* Disagreement is carried by the word "disagree", not by colour. Alarm here
+   fired on every conflicted row and drowned out the marks that matter. */
+.row__meta dd.is-disagree { color: var(--ink-2); }
 .row__meta .u-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 
 /* ── chips ──────────────────────────────────────────────────────────── */
@@ -300,9 +314,11 @@ button { font: inherit; color: inherit; background: none; border: 0; }
   white-space: normal;
 }
 .chip--type { border: 1px solid var(--ink); color: var(--ink); }
+/* Border and text only. An assurance gap is never a filled mark. */
 .chip--type.is-gap { border-color: var(--alarm); color: var(--alarm); }
+/* Filled alarm. Exactly two strings ever use this: "Sources conflict", "Blocking". */
 .chip--alarm { background: var(--alarm); color: var(--on-alarm); border: 1px solid var(--alarm); }
-.chip--move { border: 1px solid var(--rule); color: var(--ink-2); }
+.chip--move { border: 1px solid var(--rule); color: var(--ink); }
 .chip--reclass { border: 1px solid var(--ink); background: var(--reclass); color: var(--ink); }
 .chip--note { border: 1px dashed var(--rule); color: var(--ink-3); }
 
@@ -386,7 +402,10 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 }
 .row__adjudicate legend { padding: 0; }
 .adj__state { font-family: var(--font-label); font-size: 12.5px; letter-spacing: 0.06em; }
-.adj__state.is-unaccepted { color: var(--alarm); }
+/* Unaccepted is the default state of every row, so it is the norm and not an
+   exception. Alarm on a default trains the reader to ignore alarm; the
+   masthead count carries the signal instead. */
+.adj__state.is-unaccepted { color: var(--ink-3); }
 .adj__state.is-accepted, .adj__state.is-amended { color: var(--ink-2); }
 .adj__state.is-rejected { color: var(--ink-3); }
 .adj__buttons { display: flex; gap: var(--s2); }
@@ -417,7 +436,21 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 
 /* ── omissions ──────────────────────────────────────────────────────── */
 
-.omissions { margin-top: var(--s7); padding-top: var(--s4); border-top: 3px double var(--ink); }
+/* The omissions are part of the record, so the strip stays attached to the
+   register on sunk paper and above the closing rule. The production notes
+   are not part of the record and sit below it. */
+.omissions {
+  margin-top: var(--s7);
+  padding: var(--s5);
+  background: var(--paper-sunk);
+  border: 1px solid var(--rule-faint);
+}
+.omissions__head {
+  display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4);
+  align-items: baseline;
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--ink);
+}
 .omissions__list { margin-top: var(--s3); display: grid; gap: var(--s3); }
 .omissions__item { padding-bottom: var(--s3); border-bottom: 1px solid var(--rule-faint); }
 .omissions__ref { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; letter-spacing: 0.08em; color: var(--ink-3); }
@@ -435,8 +468,17 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .dialog th { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; font-weight: 600; }
 .dialog td.u-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 
-.foot { margin-top: var(--s8); padding-top: var(--s4); border-top: 1px solid var(--rule); color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; line-height: 1.6; }
-.foot p + p { margin-top: var(--s2); }
+/* Closing rule. Everything below it is method, not record, and is set at the
+   register's own prose size rather than shrunk into a footnote. */
+.foot {
+  margin-top: var(--s8);
+  padding-top: var(--s5);
+  border-top: 3px double var(--ink);
+  display: grid;
+  gap: var(--s5);
+}
+.foot__block { display: grid; gap: var(--s2); }
+.foot p { font-size: 15px; line-height: 1.55; color: var(--ink-2); max-width: 66ch; text-wrap: pretty; }
 
 /* ── mobile, < 900px ────────────────────────────────────────────────── */
 
@@ -453,8 +495,15 @@ button { font: inherit; color: inherit; background: none; border: 0; }
   }
   .row.is-alarm { padding-inline-start: 13px; }
 
+  /* The column-one wrapper dissolves so its three children become grid items
+     of the row itself, and the quote can sit after the score and meta bands
+     in the collapse order title → score → meta → quote → controls. */
+  .row__main { display: contents; }
+  .row__head { grid-area: head; }
+  .row__title { grid-area: title; }
+  .row__quote { grid-area: quote; }
+
   .row__meta { grid-template-columns: minmax(0, 1fr); }
-  .row__quote { margin-top: 0; }
 
   .weekbar__set { width: 100%; }
   .weekbar__btn { flex: 1 1 0; min-width: 0; padding: var(--s2); text-align: center; }

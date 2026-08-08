@@ -79,6 +79,7 @@ if [ "${1:-}" = "--no-ui" ]; then
 fi
 
 say "P3 — report"
+python3 build.py --check
 python3 tools/build_bundle.py
 if ! python3 -c "import playwright" 2>/dev/null; then
   echo "  playwright is not installed; skipping the browser checks."
@@ -93,5 +94,8 @@ python3 tools/check_report.py
 echo
 echo "and the same checks against the single-file build over file://"
 python3 tools/check_report.py --file | tail -2
+echo
+echo "first paint with JavaScript disabled"
+python3 tools/check_noscript.py
 
 say "all checks pass"

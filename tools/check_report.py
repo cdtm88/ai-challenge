@@ -18,6 +18,10 @@ What is checked:
                    overflow-x forced visible so a clipped page cannot report
                    clean, the document is never wider than the viewport and no
                    element's right edge crosses it
+  intake           the two source slots read a real ticket export and a real
+                   transcript in the browser, and the numbers they derive are
+                   compared against tools/corpus_stats.py — two independent
+                   implementations of the same arithmetic have to agree
   contrast         every text/background pair meets WCAG AA
   greyscale        type, band, movement, conflict and acceptance all read as
                    words with colour emulated away
@@ -32,6 +36,9 @@ import sys
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import corpus_stats  # noqa: E402  — the reference implementation of the arithmetic
+
 BROWSER = "/opt/pw-browsers/chromium"
 WEIGHTS = {"proximity": 0.35, "blast_radius": 0.25, "control_status": 0.25,
            "evidence_confidence": 0.15}
@@ -148,7 +155,13 @@ ROWS_JS = """
 
 
 def load(page, base, week):
-    page.goto(f"{base}#week-{week}", wait_until="load")
+    # Navigating to a URL that differs only by an identical hash is a
+    # fragment navigation, not a load — the document, and anything the last
+    # check left in it, would survive. Go via about:blank so every load is one.
+    url = f"{base}#week-{week}"
+    if page.url == url:
+        page.goto("about:blank")
+    page.goto(url, wait_until="load")
     page.wait_for_selector(".row", timeout=15000)
     page.wait_for_timeout(150)
 
@@ -265,6 +278,154 @@ def walk_one_item(page, base):
     check(got["sub"].count("×") == 4, "four attention factors on one sub-line", got["sub"])
 
 
+# The intake applies two floors that tools/corpus_stats.py deliberately leaves
+# off, because corpus_stats reports every firing and the register records the
+# ones below the floor as gaps. Apply them here so the two implementations are
+# compared on the same footing.
+STALE_MIN = 3
+GROWTH_MIN_EXCESS = 3
+
+TICKETS_CSV = os.path.join(ROOT, "data", "tickets.csv")
+TRANSCRIPT_JSON = os.path.join(ROOT, "data", "transcripts", "week-3.json")
+
+
+def ws_label(key):
+    return key.replace("-", " ").capitalize()
+
+
+def expected_detections(week):
+    """What tools/corpus_stats.py says the export alone can see, for one week."""
+    weeks = corpus_stats.compute()["weeks"]
+    cur = next(w for w in weeks if w["week"] == week)
+    prev = next((w for w in weeks if w["week"] == week - 1), None)
+
+    def excess(w, ws):
+        return (w["opened"].get(ws, 0) - w["closed"].get(ws, 0)) if w else 0
+
+    return {
+        "quiet": sorted(set(cur["assurance_triggers"]["low_airtime"])
+                        | set(cur["assurance_triggers"]["zero_transitions"])),
+        "staleness": sorted(ws for ws, rows in cur["detections"]["staleness"].items()
+                            if len(rows) >= STALE_MIN),
+        "growth": sorted(ws for ws in cur["opened"]
+                         if excess(cur, ws) >= GROWTH_MIN_EXCESS
+                         and excess(prev, ws) >= GROWTH_MIN_EXCESS),
+        "claimed": sorted(cur["detections"]["progress_claimed_no_transition"]),
+    }
+
+
+def load_sources(page, tickets=TICKETS_CSV, transcript=TRANSCRIPT_JSON):
+    if tickets:
+        page.set_input_files("#in-tickets", tickets)
+    if transcript:
+        page.set_input_files("#in-transcript", transcript)
+    page.wait_for_selector(".read__head", timeout=10000)
+    page.wait_for_timeout(250)
+
+
+def intake_checks(page, base):
+    print("\n--- intake ---")
+    page.emulate_media(color_scheme="light")
+    page.set_viewport_size({"width": 660, "height": 1000})
+    load(page, base, 3)
+
+    kinds = page.eval_on_selector_all(".drop", "n => n.map(x => x.dataset.kind)")
+    check(kinds == ["tickets", "transcript"], "two source slots, tickets then transcript", str(kinds))
+
+    accepts = page.eval_on_selector_all(".drop__input", "n => n.map(x => x.accept)")
+    check(len(accepts) == 2 and "csv" in accepts[0] and "json" in accepts[1],
+          "each slot states the formats it takes", str(accepts))
+
+    before = page.locator("#intake-out").inner_text().strip()
+    check(before == "", "nothing is claimed before a file arrives", repr(before[:60]))
+
+    load_sources(page)
+
+    states = page.eval_on_selector_all(".drop__state", "n => n.map(x => x.textContent.trim())")
+    check("68 rows" in states[0], "the ticket export is read and counted in the browser", states[0])
+    check("28 lines" in states[1], "the transcript is read and counted in the browser", states[1])
+
+    out = page.locator("#intake-out").inner_text()
+    heads = page.eval_on_selector_all(".read__head", "n => n.map(x => x.textContent.trim())")
+    check(len(heads) == 2 and heads[0] == "What the files say", "the readout is headed", str(heads))
+    check("2026-07-21 to 2026-07-27" in heads[1],
+          "the window is derived from the transcript date", heads[1])
+
+    check("All nine required columns present" in out,
+          "the export is checked against the input contract")
+    check("41m 00s" in out and "45m 00s" in out,
+          "airtime is totalled against the meeting length")
+
+    want = expected_detections(3)
+    lines = page.evaluate("""
+    () => {
+      const lists = document.querySelectorAll('#intake-out .read__list');
+      const last = lists[lists.length - 1];
+      return last ? Array.from(last.querySelectorAll('.read__line')).map(n => n.textContent) : [];
+    }""")
+    found = "\n".join(lines)
+
+    for ws in want["quiet"]:
+        check(any(ws_label(ws) in ln and "coverage floor" in ln for ln in lines),
+              f"coverage floor named for {ws}, as corpus_stats.py has it")
+    check("unknown, not green" in found, "absence is stated as unknown rather than green")
+
+    for ws in want["staleness"]:
+        check(any(ws_label(ws) in ln and "no transition in over" in ln for ln in lines),
+              f"staleness named for {ws}, as corpus_stats.py has it")
+
+    for ws in want["growth"]:
+        check(any(ws_label(ws) in ln and "opened more than it closed" in ln for ln in lines),
+              f"scope growth named for {ws}, as corpus_stats.py has it")
+    over = [ln for ln in lines if "opened more than it closed" in ln
+            and not any(ws_label(ws) in ln for ws in want["growth"])]
+    check(not over, "scope growth fires on nothing corpus_stats.py does not have", str(over[:2]))
+
+    check(len(lines) == len(want["quiet"]) + len(want["staleness"])
+          + len(want["growth"]) + len(want["claimed"]),
+          "the browser finds exactly what corpus_stats.py finds, and nothing more",
+          f"{len(lines)} lines against {want}")
+
+    check(page.locator("#intake-run:not([disabled])").count() == 1,
+          "a complete pair prepares a run")
+    check("needs a model, and there is none at view time" in out,
+          "the readout says what it cannot do without a model")
+
+    for width in (320, 390, 660):
+        page.set_viewport_size({"width": width, "height": 900})
+        page.wait_for_timeout(150)
+        r = page.evaluate(OVERFLOW_JS)
+        check(r["scrollWidth"] == r["vw"] and r["wideCount"] == 0,
+              f"{width}px: the loaded readout stays inside the viewport",
+              f"scrollWidth {r['scrollWidth']} vs {r['vw']}, {r['wideCount']} over the edge")
+        low = page.evaluate(CONTRAST_JS)
+        check(not low, f"{width}px: the readout meets WCAG AA",
+              "; ".join(f"{c['tag']}.{c['cls']} {c['ratio']}:1 [{c['text']}]" for c in low[:3]))
+        small = page.evaluate("""
+        () => {
+          const n = Array.from(document.querySelectorAll('.drop, #intake-out .btn'));
+          return n.length ? Math.min(...n.map(x => x.getBoundingClientRect().height)) : 0;
+        }""")
+        check(small >= 43.5, f"{width}px: every intake target is at least 44px tall",
+              f"smallest {small}")
+    page.set_viewport_size({"width": 660, "height": 1000})
+
+    # A broken export has to say what is wrong and refuse the run.
+    broken = os.path.join(ROOT, "tools", ".check-broken.csv")
+    with open(broken, "w", encoding="utf-8") as fh:
+        fh.write("ticket_id,title,status\nT-1,something,Done\n")
+    try:
+        load_sources(page, tickets=broken, transcript=None)
+        bad = page.locator("#intake-out").inner_text()
+        check("Missing required columns" in bad, "a short export names its missing columns")
+        for col in ("workstream", "status_changed_date", "created_date"):
+            check(col in bad, f"{col} named as missing")
+        check(page.locator("#intake-run[disabled]").count() == 1,
+              "an export that fails the contract cannot prepare a run")
+    finally:
+        os.remove(broken)
+
+
 def viewport_checks(page, base, width, scheme):
     page.emulate_media(color_scheme=scheme)
     page.set_viewport_size({"width": width, "height": 900})
@@ -345,6 +506,7 @@ def main():
             run_week(page, base, week)
 
         walk_one_item(page, base)
+        intake_checks(page, base)
 
         for width in (320, 390, 660):
             for scheme in ("light", "dark"):
@@ -356,6 +518,7 @@ def main():
         print("\n--- surface inventory ---")
         page.set_viewport_size({"width": 660, "height": 1000})
         load(page, base, 3)
+        load_sources(page)  # inventory the intake's own controls too
         inv = page.evaluate("""
         () => {
           const m = {};
@@ -368,7 +531,8 @@ def main():
         for k, v in sorted(inv.items()):
             print(f"  {v:>4}  {k}")
         stray = [k for k in inv if not any(
-            k.startswith(p) for p in ("button.weeks__btn", "button.adj__btn", "summary."))]
+            k.startswith(p) for p in ("button.weeks__btn", "button.adj__btn",
+                                      "input.drop__input", "button.btn", "summary."))]
         check(not stray, "no control outside the permitted set", str(stray))
 
         check(not errors, "no page errors or console errors", "; ".join(errors[:3]))

@@ -20,6 +20,38 @@
     <nav class="weeks" id="weekbar" aria-label="Week"><button type="button" class="weeks__btn" data-week="1" aria-current="false">Week 1</button><button type="button" class="weeks__btn" data-week="2" aria-current="false">Week 2</button><button type="button" class="weeks__btn" data-week="3" aria-current="true">Week 3</button><button type="button" class="weeks__btn" data-week="4" aria-current="false">Week 4</button></nav>
   </header>
 
+  <!-- Sources are read in the browser. Everything the checks below do is
+       arithmetic over the two files; nothing is uploaded and no model is
+       called, because neither is available at view time. -->
+  <section class="intake" aria-labelledby="intake-h">
+    <div class="intake__head">
+      <h2 class="intake__title" id="intake-h">Add next week's sources</h2>
+      <p class="intake__lede">The ticket export and the meeting transcript are read in this browser and checked against the register's input contract. Nothing is uploaded.</p>
+    </div>
+
+    <div class="intake__slots">
+      <label class="drop" data-kind="tickets">
+        <input type="file" class="drop__input" id="in-tickets" accept=".csv,text/csv">
+        <span class="drop__name">Ticket export</span>
+        <span class="drop__hint">Jira CSV — drop a file or choose one</span>
+        <span class="drop__state" id="state-tickets">Waiting for a file</span>
+      </label>
+
+      <label class="drop" data-kind="transcript">
+        <input type="file" class="drop__input" id="in-transcript" accept=".json,.vtt,.txt,application/json,text/plain">
+        <span class="drop__name">Meeting transcript</span>
+        <span class="drop__hint">JSON, VTT or speaker-labelled text</span>
+        <span class="drop__state" id="state-transcript">Waiting for a file</span>
+      </label>
+    </div>
+
+    <div class="intake__out" id="intake-out"></div>
+
+    <noscript>
+      <p class="intake__lede">Reading and checking the files happens in this browser, so that part needs JavaScript. The register below does not.</p>
+    </noscript>
+  </section>
+
   <!-- One line, shown only when a workstream fell under the airtime floor or
        recorded no ticket movement. It is the first thing a delivery manager
        needs, so it is not buried in a section. -->

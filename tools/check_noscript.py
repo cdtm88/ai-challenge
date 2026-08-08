@@ -90,6 +90,14 @@ def main():
         cov = page.locator("#coverage-detail .cov__row").count()
         check(cov > 0, "the coverage table is in the document", f"{cov} rows")
 
+        # The intake reads files in the browser, so it is the one part that
+        # genuinely needs script. It has to say so rather than fail silently.
+        body = page.locator("body").inner_text()
+        check("needs JavaScript" in body and "The register below does not" in body,
+              "the intake says it needs JavaScript and the register does not")
+        out = page.locator("#intake-out").inner_text().strip()
+        check(out == "", "the intake claims nothing it cannot deliver", repr(out[:60]))
+
         # <details> opens with no script at all.
         page.eval_on_selector(".row__more", "d => d.setAttribute('open','')")
         opened = page.locator(".row__more[open] .detail").count()

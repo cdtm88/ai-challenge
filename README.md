@@ -124,8 +124,9 @@ could see; and the rule that withholds a scored risk from a workstream whose
 state cannot be verified.
 
 The page is a single column meant to be read at a glance, not a table to be
-studied. It runs: header, then — when it applies — one alert line, then five
-sections, then three working notes, then a short footer.
+studied. It runs: header, then the two source slots, then — when it applies —
+one alert line, then five sections, then three working notes, then a short
+footer.
 
 **The alert line** appears only when a workstream fell under the two-minute
 airtime floor or recorded no ticket movement. It says how many of the roster
@@ -169,6 +170,41 @@ in three collapsed notes at the foot.
 
 Four weeks switch in one action and are linkable by URL hash. Acceptance is per
 item, lasts the browser session, and survives a refresh.
+
+---
+
+## Adding sources
+
+Above the register there are two slots: the ticket export and the meeting
+transcript. Drop a Jira CSV and a transcript — JSON, VTT, or speaker-labelled
+text — and the page reads both **in the browser**. Nothing is uploaded, no
+request leaves the origin, and there is no server to receive one.
+
+What it does with them is what can be done honestly without a model:
+
+**Checks them against the input contract.** The export has to carry all nine
+columns; a short one is refused by name — *missing required columns:
+workstream, created\_date…* — and cannot prepare a run. The transcript is
+counted, its format named, and its per-workstream airtime totalled against the
+meeting length, because coverage cannot be measured without it.
+
+**Runs the three model-free detections.** Staleness, scope growth, and airtime
+under the floor are arithmetic over the export and the airtime table, so they
+run here in full. The window is taken from the transcript's own date. This is
+the same arithmetic as `tools/corpus_stats.py`, written twice — once in Python
+for the pipeline, once in JavaScript for the page — and
+`tools/check_report.py` loads the real corpus into the browser and fails if the
+two implementations disagree on a single workstream.
+
+**Stops where a model would be needed.** Classification, scoring against the
+anchors and evidence selection are the two prompt passes, and there is no model
+at view time — no key, no server, no call. So the page says so, and offers the
+prepared run input as a download instead: the parsed transcript, the parsed
+tickets and the derived statistics in one JSON file, ready for
+`prompts/1-extract-classify.md`.
+
+The register below is unaffected by any of this. It is the committed output of
+four runs that already happened.
 
 ---
 
@@ -259,10 +295,13 @@ including an item that changes type mid-window and items held out and later
 returning. Both scoring axes and the ordering they produce. Typed evidence,
 including findings the export alone can see and contradictions across all three
 sources. Absence measured rather than filled in. The adjudication loop, in
-session.
+session. Source intake, in the browser: the input contract enforced on a real
+export and the three model-free detections run over it.
 
 **Described but not implemented.** The upstream pipeline from recording to
 labelled transcript. Connectors to a real ticket system and a real board.
+Calling a model from the page — intake prepares the run input; the two passes
+run offline.
 Glossary normalisation for transcription error. Persistence of the accepted
 register between runs. Retention, redaction and consent policy for recorded
 meetings.

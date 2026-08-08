@@ -4,226 +4,241 @@ A delivery risk tool that reads the weekly delivery meeting transcript alongside
 the ticket export and the reported RAG board, classifies what it finds, and
 returns a draft register where every item cites its evidence.
 
-Where the three records disagree, it says so. A workstream that stops reporting
-is measured rather than assumed green. Nothing is accepted until a human accepts
-it.
+---
 
-Built to [`docs/risk-radar-prd.md`](docs/risk-radar-prd.md) and
-[`docs/risk-radar-design-plan.html`](docs/risk-radar-design-plan.html).
+## Why it exists
+
+Delivery managers maintain risk registers by hand, from memory, after the
+meeting. The register drifts from what is actually happening, and the drift is
+invisible until something lands.
+
+Three records of the same week already exist: what was said in the room, what
+moved in the tickets, and what was reported upward. Risk Radar reads all three,
+treats none of them as the truth, and makes the gaps between them the finding.
+A workstream that stops reporting is measured rather than assumed green. A board
+that says green while the lead says otherwise and the blocking ticket hasn't
+moved in three weeks gets contradicted, with all three sources cited and the
+contradiction routed to whoever owns the reporting.
+
+The output is a draft. The delivery manager accepts, amends or rejects each
+item, and those decisions carry into the next run — because a tool that
+overrules the reporting line without asking gets switched off in a fortnight.
+
+**Who it's for:** a delivery manager running three to six concurrent
+workstreams, chairing a weekly review, maintaining a register they have to
+defend at a steering group.
 
 ---
 
-## Read it
+## How it works
 
-Open `index.html` over any static file server:
+**Three sources in, none privileged.** A speaker-labelled transcript with
+timestamps and per-workstream airtime, a ticket export, and the reported RAG
+status per workstream per week.
+
+**Classify before scoring.** Every finding is typed as a risk, an issue, a
+dependency or an assurance gap. Type decides the scale, so an issue is never
+scored on probability — once something has happened there is no likelihood left
+in it. A dependency where work cannot proceed is additionally marked blocking.
+
+**Two numbers, never blended.** Risks get exposure — impact times likelihood.
+Every item gets an attention index built from proximity, blast radius, control
+status and evidence confidence. Attention orders items inside an exposure band;
+it never inflates one, because a blended score lets a trivial risk climb the
+register by ageing.
+
+**Evidence, typed.** Every item carries at least one source: a transcript line
+with speaker and timestamp, a ticket field with an observation, a board status,
+or a run-level measurement. No source, no item — anything untraceable goes to a
+gaps list with a reason rather than being softened into the register. An item
+not evidenced this week is held out and named, never carried forward on last
+week's quote.
+
+**Three findings need nobody to have spoken.** Staleness, scope growth, and
+progress claimed with no ticket transition all run over the export alone. The
+strongest finding in the demo data is one of them: reporting's intake outgrowing
+its closures for three consecutive weeks. No single person in the room could see
+it, and the workstream lead denied it in the same meeting it surfaced.
+
+**Movement.** Each item is new, worsening, stable, improving, resolved, returned
+or reclassified, computed against the previous accepted register — so the tool
+watches change rather than taking a snapshot.
+
+### The two passes, and why the model doesn't do arithmetic
+
+Pass one finds each item, types it, and attaches its sources. It emits no
+number that is a score.
+
+Pass two scores each factor against a written anchor, and records the anchor
+sentence it scored against so a reader can argue with the judgement rather than
+the total. It emits no total, no band, no ordering.
+
+`score.py` then multiplies, weights, bands, sorts, and computes movement.
+
+The split is the whole design. A model judges a factor against a written anchor
+well and does consistent weighted arithmetic badly, and arithmetic is where
+confident-sounding wrongness usually enters. Keeping it in code is what makes
+the ranking reproducible: the same week ranks the same way every time, and
+`score.py --check` fails if a committed register has drifted from its own factor
+scores.
+
+---
+
+## Built with
+
+**Python 3, standard library only.** The pipeline — corpus statistics, scoring,
+validation — has no third-party dependency. `validate.py` carries a small
+JSON Schema draft-07 subset validator so a fresh clone can check the output
+contract with nothing installed; where the `jsonschema` package happens to be
+present it is used as a cross-check and any disagreement between the two is
+itself reported as a failure.
+
+**Vanilla HTML, CSS and JavaScript for the report.** No framework, no build
+step, no bundler, no transpiler. One page, one stylesheet, one script, and the
+run data as committed JSON. The whole artifact is readable in one place and
+there is no build to break.
+
+**No model call at view time.** Outputs are generated offline and committed as
+fixtures, so there is no key to expose, no server component, no credentials, and
+no request to any origin but the page's own. It works from a static host or from
+a bare filesystem.
+
+**Playwright** drives the browser checks, and is the only dependency anywhere in
+the repository. It is needed to check the report, not to run it.
+
+---
+
+## Reading the report
 
 ```sh
 python3 -m http.server 8765
-# then http://127.0.0.1:8765/index.html#week-3
+# http://127.0.0.1:8765/index.html#week-3
 ```
 
-Or open `risk-radar.html` directly from the filesystem — the whole report as one
-file, markup, stylesheet, script and data, no server needed.
+Or open `risk-radar.html` straight from the filesystem — the whole report in one
+file, markup, stylesheet, script and data, no server required.
 
-Week 3 is the week to start with. It carries the contradiction between the
-board, the room and the tickets; the workstream that went quiet; and the finding
-nobody in the room could see.
+Start on week 3. It carries the contradiction between the board, the room and
+the tickets; the workstream that went quiet; the finding nobody in the room
+could see; and the rule that withholds a scored risk from a workstream whose
+state cannot be verified.
 
-There is no model call at view time, no server component, no credentials, and no
-request to any origin but the page's own.
-
----
-
-## What it does
-
-**Six functions, and everything else is backlog.**
-
-1. **Three sources, none privileged.** A speaker-labelled transcript with
-   timestamps and per-workstream airtime, a ticket export, and the reported RAG
-   board.
-2. **Classify before scoring.** Every finding is typed as a risk, an issue, a
-   dependency or an assurance gap against explicit tests. Type decides the
-   scale, so an issue is never scored on probability.
-3. **Two axes, never blended.** Risks get exposure, impact × likelihood. Every
-   item gets an attention index from proximity, blast radius, control status and
-   evidence confidence. Attention orders items inside an exposure band; it never
-   inflates one.
-4. **Cite and corroborate.** Every item carries at least one typed source. Where
-   sources conflict, the conflict is stated, all sources are cited, and it is
-   routed to whoever owns the reporting. Conflict raises attention rather than
-   discounting the item.
-5. **Track movement.** Each item is new, worsening, stable, improving, resolved,
-   returned or reclassified, against the previous accepted register.
-6. **Issue as a draft.** Accept, amend or reject per item. Decisions carry into
-   the next run, so adjudicated items are not re-litigated.
-
-**Three detections need nobody to have said anything.** Staleness, scope growth,
-and progress claimed with no ticket transition. These run over the export alone.
-The strongest finding in the demo data is one of them: reporting's intake
-outgrowing its closures for three consecutive weeks, which no single person in
-the room could see, and which the workstream lead denied in the same meeting it
-was raised.
+Four weeks are switchable in one tap and linkable by URL. Items are grouped by
+type with each group stating the scale it is scored on, so a reader is never
+comparing an issue to a risk on one number. Every row states its score and
+scale, its workstream, whether anything is being done about it, whether it moved
+this week, and whether its sources conflict — all as words, not only as colour.
+One disclosure per row opens the full evidence, including surrounding transcript
+context and field-level ticket detail, and the arithmetic as a worked sum.
+Acceptance is per item and lasts the browser session.
 
 ---
 
 ## Layout
 
 ```
-docs/                       the PRD and the design plan this was built from
+docs/                          the PRD and design plan this was built from
 data/
-  transcripts/week-1..4.json  four meetings, role-labelled, with airtime
-  tickets.csv                 68-row export, snapshot as at week 4
-  board.json                  reported RAG per workstream per week
+  transcripts/week-1..4.json     four meetings, role-labelled, with airtime
+  tickets.csv                    68-row export, snapshot as at week 4
+  board.json                     reported RAG per workstream per week
 prompts/
-  1-extract-classify.md       pass 1: find it, type it, cite it. No scores.
-  2-score.md                  pass 2: score each factor against an anchor. No totals.
-runs/
-  week-1..4-register.json     the committed run output, one per week
-schema/register.schema.json   the output contract
-validate.py                   schema plus the invariants schema cannot express
-score.py                      both totals, the ordering and the movement
+  1-extract-classify.md          pass 1: find it, type it, cite it
+  2-score.md                     pass 2: score each factor against an anchor
+runs/week-1..4-register.json   the committed run output, one per week
+schema/register.schema.json    the output contract
+score.py                       both totals, the ordering, the movement
+validate.py                    schema, plus the invariants schema can't express
 tools/
-  corpus_stats.py             derives the coverage numbers and the three detections
-  build_bundle.py             data.bundle.js and the single-file build
-  check_report.py             the P3 browser checks
-index.html styles.css app.js  the report
-risk-radar.html               the report as one file (generated)
-data.bundle.js                the data inlined for file:// (generated)
-verify.sh                     every "done when" check in the roadmap
+  corpus_stats.py                coverage numbers and export detections
+  build_bundle.py                the inlined data and single-file build
+  check_report.py                the browser checks
+index.html styles.css app.js   the report
+risk-radar.html                the report as one file (generated)
+data.bundle.js                 the data inlined for file:// (generated)
+verify.sh                      runs everything
 ```
 
----
-
-## Verify it
+Commands:
 
 ```sh
-./verify.sh              # everything
-./verify.sh --no-ui      # P1 and P2 only, no browser needed
+./verify.sh                    # everything
+./verify.sh --no-ui            # pipeline only, no browser needed
+python3 tools/corpus_stats.py  # per-week coverage and detections, from data/
+python3 score.py               # recompute totals, ordering and movement
+python3 validate.py            # validate all four weeks
+python3 tools/build_bundle.py  # regenerate the inlined data and single-file build
+python3 tools/check_report.py  # drive a browser through the report
 ```
 
-`verify.sh` runs each roadmap criterion in order and fails on the first one that
-does not hold. No dependency is required for P1 and P2 — `validate.py` carries
-its own draft-07 subset validator and cross-checks against the `jsonschema`
-package when that happens to be installed. The P3 checks need `playwright`.
-
-The individual pieces:
-
-```sh
-python3 tools/corpus_stats.py     # per-week coverage and detections, derived from data/
-python3 score.py                  # recompute totals, ordering and movement
-python3 score.py --check          # fail if a committed file differs from the recomputation
-python3 validate.py               # ING-07: all four weeks, exits 0
-python3 tools/build_bundle.py     # regenerate data.bundle.js and risk-radar.html
-python3 tools/check_report.py     # RPT-02..09, NFR-01, NFR-03, NFR-04
-```
-
-The report checks assert the design plan's own list: every group heading prints
-its scale, every row states its five facts as words with all disclosures closed,
-one item walks end to end from quote-in-context to precedence and routing, both
-totals recompute from the printed factors, assurance gaps lead every week, and
-at 320px and 390px in both colour schemes nothing overflows, nothing is clipped
-and every text pair clears WCAG AA. Greyscaling the page is a check, not a
-review note: type, band, movement, conflict and acceptance all still read.
+The browser checks cover both colour schemes at phone and desktop widths, and
+include a greyscale pass — type, band, movement, conflict and acceptance all
+have to survive without colour, since that is what makes them readable rather
+than decorative.
 
 ---
 
-## How the two passes work
-
-**Pass 1 — extract and classify.** Reads the three sources and the previous
-accepted register. Finds every item the records support, types it against the
-classification tests, attaches typed sources, flags contradictions, and marks
-hedged claims against a fixed lexical list. Emits no number that is a score.
-
-**Pass 2 — score.** Takes pass 1's output and scores each factor against the
-written anchors in PRD section 5, recording the anchor sentence it scored
-against. Emits no total, no band, no ordering, no movement.
-
-**`score.py`.** Multiplies impact by likelihood, weights the four attention
-factors, assigns the band, computes movement against the previous week, and
-sorts. This split is the point: a model judges a factor against a written anchor
-well and does consistent weighted arithmetic badly. Keeping the arithmetic in
-code is what makes the ranking reproducible — three runs of the same week return
-the same top five in the same order, and `score.py --check` fails if a committed
-file has drifted from its own factor scores.
-
-The fixtures in `runs/` were produced by executing the two prompt files against
-the corpus offline, and are committed as-is. There is no model call at runtime,
-so there is no key to expose and what the report displays is genuine run output.
-
----
-
-## What is demonstrated, and what is only asserted
-
-**Demonstrated.** The classification tests on real ambiguity, including one item
-that changes type mid-window and two that are held out and later return. Both
-scoring axes and the ordering they produce. Typed evidence, including findings
-the export alone can see and contradictions between all three sources. Absence
-measured rather than filled in — and the rule biting, where a risk is withheld
-because it belongs to a workstream nobody can see. The adjudication loop, in
-session.
-
-**Asserted, with a described design but no implementation.** The upstream
-pipeline from recording to labelled transcript. Connectors to a real ticket
-system and a real board. Glossary normalisation for transcription error.
-Persistence of the accepted register between runs. Retention, redaction and
-consent policy for recorded meetings.
-
-The line is deliberate. Everything in the first list is cheap to build and hard
-to fake. Everything in the second is expensive to build and easy to describe.
-
----
-
-## Interpretation notes
-
-Four places where the PRD needed a decision, recorded so they can be argued
-with rather than discovered.
-
-**CLS-02 against SCO-02.** CLS-02 forbids emitting likelihood, exposure or
-proximity for anything other than a risk. SCO-02 requires an attention
-composite, which includes a proximity factor, for every type. These are read as
-governing different things: the item-level `likelihood`, `exposure` and
-`proximity` fields are risk-only and the schema rejects them elsewhere;
-`attention_factors.proximity` is a scoring input that exists on every type. The
-report follows the design plan and prints a proximity line only on risks; on
-other types the factor appears in the arithmetic panel, labelled as an attention
-factor.
-
-**Movement for assurance gaps.** The movement rules define worsening in terms of
-exposure, impact or criticality, and an assurance gap has none of those. Ageing
-explicitly never produces movement, so weeks-absent cannot be the measure
-either. A gap's measure is therefore what it leaves unverifiable — carried
-items that cannot be checked plus downstream dependencies left unconfirmed —
-which is the thing that actually deteriorates. On the row, the week count is
-printed instead of the raw delta, because "2nd week absent" is legible and
-"1 → 3" is not.
+## Design decisions worth knowing
 
 **Two thresholds are asserted, not derived.** Staleness fires above 10 days.
-Scope growth needs the excess to be three or more tickets in each of two
-consecutive weeks. Applied literally with no materiality floor, scope growth
-fires on five of six workstreams in week 4 on an excess of a single ticket,
-which is noise at this data volume. Both thresholds are constants in
-`tools/corpus_stats.py`, both are stated in the prompt, and every firing below
-the floor is recorded in that week's gaps list rather than silently dropped.
-Four weeks of synthetic data cannot calibrate either.
+Scope growth needs an excess of three or more tickets in each of two consecutive
+weeks. Without that second floor, scope growth fires on five of six workstreams
+on an excess of a single ticket, which is noise at this data volume. Both are
+constants in `tools/corpus_stats.py`, both are stated in the prompts, and every
+firing below the floor is recorded in that week's gaps list rather than silently
+dropped. Four weeks of data cannot calibrate either.
 
-**Ticket transitions from a single snapshot.** `tickets.csv` is one export with
-one `status_changed_date` per row, as ING-03 specifies. A transition is
-therefore counted in the week that date falls in, which means a ticket that
-moved twice in the window is only seen once. A real deployment reads a
-transition history; the derivation rules are written out at the top of
-`tools/corpus_stats.py`.
+**Ticket transitions come from a single snapshot.** The export carries one
+`status_changed_date` per row, so a transition is counted in the week that date
+falls in — meaning a ticket that moved twice in a week is seen once. A real
+deployment reads a transition history. The derivation rules are written out at
+the top of `tools/corpus_stats.py`.
 
-**Typefaces.** The design plan specifies Spectral, IBM Plex Sans and IBM Plex
-Mono. Loading them would mean a request to another origin, which NFR-05
-forbids, so the three roles — serif for prose, sans for labels, mono with
-tabular figures for every number — are held by system stacks instead.
+**Hedge detection is a fixed lexical list**, not sentiment analysis:
+*assuming, should be, hopefully, likely, I think, probably, if X then, in
+theory, realistically, we expect, all being well, more or less, ought to*. A
+claim whose only support carries one of these cannot exceed likelihood 3. A
+fixed list is reproducible and explainable; a sentiment score is neither.
+
+**Owners and mitigations are captured, never generated.** Stated ones are
+recorded with their owner and date. Where nothing was stated, the control is
+nothing stated. Nobody's name is invented and no mitigation is written on
+someone's behalf.
+
+**Typefaces are system stacks.** The design plan specifies Spectral, IBM Plex
+Sans and IBM Plex Mono. Loading them would mean a request to another origin, so
+the three roles — serif for prose, sans for labels, mono with tabular figures
+for every number — are held by system stacks instead.
+
+---
+
+## Scope
+
+This is a prototype, not a product.
+
+**Built and demonstrated.** The classification tests on real ambiguity,
+including an item that changes type mid-window and items held out and later
+returning. Both scoring axes and the ordering they produce. Typed evidence,
+including findings the export alone can see and contradictions across all three
+sources. Absence measured rather than filled in. The adjudication loop, in
+session.
+
+**Described but not implemented.** The upstream pipeline from recording to
+labelled transcript. Connectors to a real ticket system and a real board.
+Glossary normalisation for transcription error. Persistence of the accepted
+register between runs. Retention, redaction and consent policy for recorded
+meetings.
+
+The line is deliberate: everything in the first list is cheap to build and hard
+to fake, and everything in the second is expensive to build and easy to
+describe.
 
 ---
 
 ## Data
 
 All content is self-created. No real organisation, client, colleague or project
-appears anywhere in this repository. Speakers are role labels: delivery manager,
-platform lead, integration lead, data migration lead, reporting lead, test lead,
-adoption lead, programme architect. The programme, its six workstreams, the
-sixty-eight tickets and the four meetings are invented.
+appears anywhere in this repository. Speakers are role labels — delivery
+manager, platform lead, integration lead, data migration lead, reporting lead,
+test lead, adoption lead, programme architect. The programme, its six
+workstreams, the sixty-eight tickets and the four meetings are invented.

@@ -123,14 +123,52 @@ the tickets; the workstream that went quiet; the finding nobody in the room
 could see; and the rule that withholds a scored risk from a workstream whose
 state cannot be verified.
 
-Four weeks are switchable in one tap and linkable by URL. Items are grouped by
-type with each group stating the scale it is scored on, so a reader is never
-comparing an issue to a risk on one number. Every row states its score and
-scale, its workstream, whether anything is being done about it, whether it moved
-this week, and whether its sources conflict — all as words, not only as colour.
-One disclosure per row opens the full evidence, including surrounding transcript
-context and field-level ticket detail, and the arithmetic as a worked sum.
-Acceptance is per item and lasts the browser session.
+The page is a single column meant to be read at a glance, not a table to be
+studied. It runs: header, then — when it applies — one alert line, then five
+sections, then three working notes, then a short footer.
+
+**The alert line** appears only when a workstream fell under the two-minute
+airtime floor or recorded no ticket movement. It says how many of the roster
+did not report, which ones, and that their state is unknown rather than green.
+It sits above the register because it is the first thing a delivery manager
+needs, and burying it in a section would be the same mistake the tool exists
+to catch.
+
+**Sections** run in fixed order — assurance gaps, risks, issues, dependencies,
+closed — each with its scale stated beside the heading, so a reader is never
+carrying a number across a boundary. An empty section says so in one line
+rather than disappearing.
+
+**A row** is three things and is meant to be legible in under a second:
+
+- the number that decides its place, with the word for the scale it sits on:
+  the band for a risk, `Impact` for an issue, `Criticality` for a dependency,
+  and `Unknown` for an assurance gap, which has no score and does not borrow
+  one;
+- the title;
+- one grey line: the workstream, then only what is true and worth acting on —
+  movement, and nothing at all when the item is stable; `Sources conflict`;
+  `Unmanaged` or `No owner`; `From tickets only` where the export alone raised
+  it. A row with nothing wrong shows the workstream alone.
+
+Colour is spent on the number and on those two or three words, and nowhere
+else. Red for critical and for conflict, amber for high and for a management
+gap, green for low and for closed. Every one of them is a word first, so the
+page survives being read in greyscale.
+
+**Everything else is one action away.** Each row's disclosure carries, in
+order: any reclassification, any contradiction with the source that takes
+precedence and who it is routed to, the statement, the evidence — the primary
+source in full, a quote with its speaker and timestamp and two lines either
+side, or the ticket record field by field, then one compact `Also:` line for
+the remaining sources — the assessment as a small definition list, and finally
+Accept, Amend and Reject with the current state beside them.
+
+Coverage by workstream, the omitted list and an explanation of the scoring sit
+in three collapsed notes at the foot.
+
+Four weeks switch in one action and are linkable by URL hash. Acceptance is per
+item, lasts the browser session, and survives a refresh.
 
 ---
 

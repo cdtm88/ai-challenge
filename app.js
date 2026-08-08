@@ -4,77 +4,59 @@
  * origin but this one. The register's content is decided in runs/*.json;
  * this file decides only how it is laid out and what can be reached.
  *
- * JS is required to read the register but not to read the record: the four
- * files under runs/ are the complete output and are readable on their own.
+ * A collapsed row is three things: a number with its scale word, a title,
+ * and one grey meta line. Everything else — id, owner, source counts, the
+ * factor arithmetic, acceptance — lives behind that row's disclosure.
+ * Nothing is dropped; it is moved.
  */
 (function () {
   "use strict";
 
   var WEEKS = [1, 2, 3, 4];
+  var AIRTIME_FLOOR = 120;  // CLS-05: under two minutes is not a report
 
-  var GROUPS = [
-    {
-      type: "assurance-gap",
-      name: "Assurance gaps",
-      scale: "Scale: coverage counts — not scored",
-      note: "Listed first because a workstream that has not reported has not reported green.",
-      empty: "No assurance gaps evidenced this week."
-    },
-    {
-      type: "risk",
-      name: "Risks",
-      scale: "Scale: exposure = impact × likelihood, 1–25",
-      empty: "No risks evidenced this week."
-    },
-    {
-      type: "issue",
-      name: "Issues",
-      scale: "Scale: impact 1–5 — no likelihood, it has occurred",
-      empty: "No issues evidenced this week."
-    },
-    {
-      type: "dependency",
-      name: "Dependencies",
-      scale: "Scale: criticality 1–5 — blocking listed first",
-      empty: "No dependencies evidenced this week."
-    }
+  /* Section order is fixed and is an argument, not a preference. "Closed"
+     collects anything the run resolved this week, whatever its type. */
+  var SECTIONS = [
+    { key: "assurance-gap", name: "Assurance gaps", scale: "coverage counts, not scored",
+      empty: "No assurance gaps evidenced this week." },
+    { key: "risk", name: "Risks", scale: "exposure, 1 to 25",
+      empty: "No risks evidenced this week." },
+    { key: "issue", name: "Issues", scale: "impact, 1 to 5",
+      empty: "No issues evidenced this week." },
+    { key: "dependency", name: "Dependencies", scale: "criticality, 1 to 5",
+      empty: "No dependencies evidenced this week." },
+    { key: "closed", name: "Closed", scale: "resolved this week",
+      empty: "Nothing closed this week." }
   ];
 
   var TYPE_WORD = {
-    "risk": "Risk",
-    "issue": "Issue",
-    "dependency": "Dependency",
-    "assurance-gap": "Assurance gap"
+    "risk": "Risk", "issue": "Issue",
+    "dependency": "Dependency", "assurance-gap": "Assurance gap"
   };
 
   var MOVE_WORD = {
-    "new": "New",
-    "worsening": "Worsening",
-    "improving": "Improving",
-    "stable": "Stable",
-    "resolved": "Resolved",
-    "returned": "Returned",
+    "new": "New", "worsening": "Worsening", "improving": "Improving",
+    "stable": "Stable", "resolved": "Resolved", "returned": "Returned",
     "reclassified": "Reclassified"
   };
 
+  var BAND_WORD = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
+
   var CRITICALITY_WORD = {
-    1: "Desirable — work continues without it",
-    2: "Between desirable and milestone-critical",
-    3: "A milestone depends on it",
-    4: "Between milestone and release-critical",
-    5: "The release depends on it, no alternative path"
+    1: "desirable, work continues without it",
+    2: "between desirable and milestone-critical",
+    3: "a milestone depends on it",
+    4: "between milestone and release-critical",
+    5: "the release depends on it, no alternative path"
   };
 
   var SOURCE_ORDER = { ticket: 0, transcript: 1, board: 2, metadata: 3 };
 
   var WS_LABEL = {
-    "platform": "Platform",
-    "integration": "Integration",
-    "data-migration": "Data migration",
-    "reporting": "Reporting",
-    "test": "Test",
-    "adoption": "Adoption",
-    "programme": "Programme"
+    "platform": "Platform", "integration": "Integration",
+    "data-migration": "Data migration", "reporting": "Reporting",
+    "test": "Test", "adoption": "Adoption", "programme": "Programme"
   };
 
   var data = null;
@@ -115,7 +97,7 @@
 
   function wsLabel(key) {
     if (WS_LABEL[key]) return WS_LABEL[key];
-    return key.replace(/-/g, " ").replace(/^./, function (c) { return c.toUpperCase(); });
+    return String(key).replace(/-/g, " ").replace(/^./, function (c) { return c.toUpperCase(); });
   }
 
   function mmss(seconds) {
@@ -130,7 +112,12 @@
     return Math.round((b - a) / 86400000);
   }
 
-  // ── acceptance, session-scoped (D-11) ────────────────────────────────
+  function sentence(list) {
+    if (list.length <= 1) return list.join("");
+    return list.slice(0, -1).join(", ") + " and " + list[list.length - 1];
+  }
+
+  // ── acceptance, session-scoped ───────────────────────────────────────
 
   function loadAcceptance() {
     try {
@@ -144,241 +131,140 @@
     try {
       window.sessionStorage.setItem("risk-radar-acceptance", JSON.stringify(acceptance));
     } catch (e) {
-      /* private mode, or storage disabled. The session simply does not survive reload. */
+      /* private mode, or storage disabled: the session simply does not survive reload */
     }
   }
 
-  function acceptanceKey(week, item) { return week + ":" + item.id; }
-
   function acceptanceFor(week, item) {
-    return acceptance[acceptanceKey(week, item)] || item.acceptance;
+    return acceptance[week + ":" + item.id] || item.acceptance;
   }
 
-  function setAcceptance(week, item, state, note) {
-    acceptance[acceptanceKey(week, item)] = {
-      state: state,
-      by: "This session",
-      at: null,
-      note: note || null
-    };
+  function setAcceptance(week, id, state, note) {
+    acceptance[week + ":" + id] = { state: state, by: "This session", at: null, note: note || null };
     saveAcceptance();
   }
 
-  // ── chips (the complete vocabulary; five is the ceiling per row) ─────
+  // ── the collapsed row ────────────────────────────────────────────────
 
-  function chipsFor(item, acc) {
-    var chips = [];
-
-    chips.push(el("span", {
-      class: "chip chip--type" + (item.type === "assurance-gap" ? " is-gap" : ""),
-      text: TYPE_WORD[item.type]
-    }));
-
-    if (item.contradiction && item.contradiction.present) {
-      chips.push(el("span", { class: "chip chip--alarm", text: "Sources conflict" }));
-    }
-    if (item.type === "dependency" && item.blocking) {
-      chips.push(el("span", { class: "chip chip--alarm", text: "Blocking" }));
-    }
-
-    if (item.reclassified && item.movement.state === "reclassified") {
-      chips.push(el("span", {
-        class: "chip chip--reclass",
-        text: "Reclassified W" + item.reclassified.week + " · was a " + item.reclassified.from_type +
-              (item.reclassified.from_id ? ", " + item.reclassified.from_id : "")
-      }));
+  /* The left column: the number that decides the row's place, and the word
+     that says which scale it sits on. An assurance gap has no score, and
+     says so rather than borrowing one. */
+  function scoreParts(item, closed) {
+    var p;
+    if (item.type === "risk") {
+      p = { num: String(item.computed.exposure), label: BAND_WORD[item.computed.band] || "Band" };
+      p.tone = closed ? "is-closed"
+        : item.computed.band === "critical" ? "is-critical"
+        : item.computed.band === "high" ? "is-high"
+        : item.computed.band === "low" ? "is-low" : "";
+    } else if (item.type === "issue") {
+      p = { num: String(item.impact), label: "Impact", tone: closed ? "is-closed" : "" };
+    } else if (item.type === "dependency") {
+      p = { num: String(item.criticality), label: "Criticality", tone: closed ? "is-closed" : "" };
     } else {
-      chips.push(el("span", { class: "chip chip--move", text: movementText(item) }));
+      p = { num: "—", label: "Unknown", tone: closed ? "is-closed" : "is-unknown" };
     }
-
-    var note = noteChipText(item);
-    if (note && chips.length < 5) chips.push(el("span", { class: "chip chip--note", text: note }));
-
-    return chips.slice(0, 5);
+    return p;
   }
 
-  function movementText(item) {
+  /* Movement is worth a word only when something moved. A stable item says
+     nothing, so the eye skips it. */
+  function movementWord(item) {
     var m = item.movement;
     var word = MOVE_WORD[m.state];
-
-    /* An assurance gap has no score, so its measure is how much it leaves
-       unverifiable — a number that means nothing on a chip. Where the gap is
-       an absence, the week count is the legible fact; otherwise say what the
-       measure is rather than printing a bare delta. */
+    if (m.state === "stable") return null;
+    if (m.state === "reclassified" && item.reclassified) {
+      return "Reclassified from " + item.reclassified.from_type;
+    }
     if (item.type === "assurance-gap") {
-      if (item.coverage && item.coverage.weeks_absent) {
-        return word + " · " + ordinal(item.coverage.weeks_absent) + " week absent";
-      }
-      if ((m.state === "worsening" || m.state === "improving") && m.from !== null) {
-        return word + " · unverifiable " + m.from + " → " + m.to;
+      if (m.state === "worsening" && item.coverage && item.coverage.weeks_absent) {
+        return "Worsening, " + item.coverage.weeks_absent + " weeks absent";
       }
       return word;
     }
-
-    if (m.state === "worsening" || m.state === "improving") {
-      if (m.from !== null && m.to !== null) return word + " " + m.from + " → " + m.to;
-    }
-    if (m.state === "resolved" && m.from !== null) return word + " · was " + m.from;
-    if (item.type === "dependency" && typeof m.weeks_waiting === "number") {
-      return word + " · " + ordinal(m.weeks_waiting) + " week waiting";
+    if ((m.state === "worsening" || m.state === "improving") && m.from !== null && m.to !== null) {
+      return word + " " + m.from + " → " + m.to;
     }
     return word;
   }
 
-  function ordinal(n) {
-    var s = ["th", "st", "nd", "rd"];
-    var v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-  }
-
-  function noteChipText(item) {
-    if (item.hedge && item.hedge.present && item.hedge.cap_applied) return "Hedged — capped at 3";
-    if (item.detection && item.detection.export_only) return "Export only — unspoken";
-    if (item.hedge && item.hedge.present) return "Hedged claim";
-    if (item.detection) return "Export detection — " + item.detection.rule.replace(/-/g, " ");
+  /* Amber is for a management gap: something nobody owns, or nobody is
+     doing. It is not for a low score. */
+  function controlWord(item) {
+    if (item.control.score >= 5) return "Unmanaged";
+    if (item.control.score >= 4) return "No owner";
     return null;
   }
 
-  // ── score block ──────────────────────────────────────────────────────
+  function metaLine(item) {
+    var parts = [el("span", { text: wsLabel(item.workstream) })];
 
-  function scoreBlock(item) {
-    var c = item.computed;
-    var dl = el("dl", { class: "row__score" });
+    var mv = movementWord(item);
+    if (mv) parts.push(el("span", { text: mv }));
 
-    if (item.type === "risk") {
-      var critical = c.band === "critical";
-      append(dl, [
-        el("dt", { class: "u-sr", text: "Exposure" }),
-        el("dd", {}, [
-          el("div", { class: "score__value" + (critical ? " is-critical" : ""), text: c.exposure + "/25" }),
-          el("div", { class: "score__band" + (critical ? " is-critical" : ""), text: c.band + " band" }),
-          el("div", { class: "score__terms", text: item.impact + " impact × " + item.likelihood + " likelihood" }),
-          el("div", { class: "score__attention", text: "attention " + c.attention.toFixed(2) + " / 5" })
-        ])
-      ]);
-    } else if (item.type === "issue") {
-      append(dl, [
-        el("dt", { class: "u-sr", text: "Impact" }),
-        el("dd", {}, [
-          el("div", { class: "score__value", text: item.impact + "/5" }),
-          el("div", { class: "score__band", text: "Impact" }),
-          el("div", { class: "score__attention", text: "attention " + c.attention.toFixed(2) + " / 5" })
-        ])
-      ]);
-    } else if (item.type === "dependency") {
-      append(dl, [
-        el("dt", { class: "u-sr", text: "Criticality" }),
-        el("dd", {}, [
-          el("div", { class: "score__value", text: item.criticality + "/5" }),
-          el("div", { class: "score__band", text: CRITICALITY_WORD[item.criticality] }),
-          el("div", { class: "score__attention", text: "attention " + c.attention.toFixed(2) + " / 5" })
-        ])
-      ]);
-    } else {
-      var cov = item.coverage;
-      var counts = el("div", { class: "score__counts" });
-      append(counts, [
-        countLine("airtime", mmss(cov.airtime_seconds)),
-        countLine("transitions", String(cov.transitions)),
-        typeof cov.carried_unverifiable === "number"
-          ? countLine("carried unverifiable", String(cov.carried_unverifiable)) : null,
-        typeof cov.downstream_unconfirmed === "number"
-          ? countLine("downstream deps unconfirmed", String(cov.downstream_unconfirmed)) : null
-      ]);
-      append(dl, [
-        el("dt", { class: "u-sr", text: "Coverage" }),
-        el("dd", {}, [
-          counts,
-          el("div", { class: "score__attention", text: "attention " + c.attention.toFixed(2) + " / 5" })
-        ])
-      ]);
+    if (item.contradiction && item.contradiction.present) {
+      parts.push(el("span", { class: "is-conflict", text: "Sources conflict" }));
     }
-    return dl;
+
+    var ctl = controlWord(item);
+    if (ctl) parts.push(el("span", { class: "is-unmanaged", text: ctl }));
+
+    if (item.detection && item.detection.export_only) {
+      parts.push(el("span", { text: "From tickets only" }));
+    }
+
+    var line = el("p", { class: "row__meta" });
+    parts.forEach(function (p, i) {
+      if (i) line.appendChild(el("span", { class: "sep", text: "·" }));
+      line.appendChild(p);
+    });
+    return line;
   }
 
-  function countLine(label, value) {
-    return el("div", {}, [label + " ", el("b", { text: value })]);
-  }
+  // ── the disclosure ───────────────────────────────────────────────────
 
-  // ── meta block ───────────────────────────────────────────────────────
-
-  function metaBlock(item) {
-    var dl = el("dl", { class: "row__meta" });
-    var types = sourceTypes(item);
-    var agreement = types.length < 2
-      ? "uncorroborated"
-      : (item.contradiction && item.contradiction.present ? "disagree" : "agree");
-
-    append(dl, [
-      el("dt", { text: "Workstream" }),
-      el("dd", { text: wsLabel(item.workstream) }),
-      el("dt", { text: "Owner" }),
-      el("dd", { text: item.owner.role ? item.owner.role : "Unowned" }),
-      el("dt", { text: "Control" }),
-      el("dd", {}, [controlWord(item.control), " · ", el("span", { class: "u-num", text: item.control.score + "/5" })]),
-      el("dt", { text: "Sources" }),
-      el("dd", { class: agreement === "disagree" ? "is-disagree" : null }, [
-        el("span", { class: "u-num", text: String(types.length) }),
-        " source type" + (types.length === 1 ? "" : "s") + " · " + agreement
-      ]),
-      el("dd", { text: types.join(" · ") })
-    ]);
-    // A dependency's two parties are stated in the title and again in the
-    // fact line in column one, per the design plan's row anatomy. Repeating
-    // them a third time here only made the tallest column taller.
-    return dl;
-  }
-
-  /* Design plan, dependency row: the waiting party, the counterparty and the
-     week the wait started sit under the statement in column one. */
-  function factsLine(item) {
-    if (item.type !== "dependency") return null;
-    return el("p", { class: "row__facts" }, [
-      el("span", { class: "row__facts-k", text: "waiting " }),
-      wsLabel(item.waiting_workstream),
-      el("span", { class: "row__facts-k", text: " · counterparty " }),
-      wsLabel(item.counterparty),
-      el("span", { class: "row__facts-k", text: " · started " }),
-      el("span", { class: "u-num", text: "W" + item.week_started })
+  function reclassNote(item) {
+    if (!item.reclassified) return null;
+    var r = item.reclassified;
+    return el("div", { class: "note-line" }, [
+      el("b", { text: "Reclassified" }),
+      "Was a " + r.from_type + (r.from_id ? ", " + r.from_id : "") +
+      " until week " + r.week + ". " + r.trigger + "."
     ]);
   }
 
-  function controlWord(control) {
-    if (control.score === 0) return "Owned, dated";
-    if (control.score === 2) return "Owned, no date";
-    if (control.score === 4) return "Unowned mention";
-    return "Nothing stated";
+  function contradictionNote(item) {
+    var c = item.contradiction;
+    if (!c || !c.present) return null;
+    return el("div", { class: "note-line is-conflict" }, [
+      el("b", { text: "Sources conflict" }),
+      c.statement + " The " + c.precedence + " record is taken as precedent. Routed to " +
+      c.routed_to + "."
+    ]);
   }
 
-  function sourceTypes(item) {
-    var seen = [];
-    item.sources.forEach(function (s) { if (seen.indexOf(s.type) < 0) seen.push(s.type); });
-    return seen.sort(function (a, b) { return SOURCE_ORDER[a] - SOURCE_ORDER[b]; });
+  function orderedSources(item) {
+    return item.sources.slice().sort(function (a, b) {
+      return SOURCE_ORDER[a.type] - SOURCE_ORDER[b.type];
+    });
   }
 
-  // ── quote, with hedge terms marked in situ ───────────────────────────
-
-  function quoteBlock(item) {
-    var t = null;
+  /* The primary source is the one a reader can judge fastest: a person on
+     the record, otherwise the ticket that shows the state. */
+  function primarySource(item) {
+    var src = item.sources;
+    var pick = null;
     if (item.hedge && item.hedge.present && item.hedge.quote) {
-      t = item.sources.filter(function (s) {
-        return s.type === "transcript" && s.quote === item.hedge.quote;
-      })[0];
+      pick = src.filter(function (s) { return s.type === "transcript" && s.quote === item.hedge.quote; })[0];
     }
-    if (!t) t = item.sources.filter(function (s) { return s.type === "transcript"; })[0];
-    if (!t) return null;
-
-    var terms = (item.hedge && item.hedge.present) ? item.hedge.terms || [] : [];
-    return el("blockquote", { class: "row__quote" }, [
-      el("p", {}, markHedges("“" + t.quote + "”", terms)),
-      el("cite", {
-        text: t.speaker + ", week " + t.week + " line " + t.line + (t.timestamp ? ", " + t.timestamp : "")
-      })
-    ]);
+    return pick
+      || src.filter(function (s) { return s.type === "transcript"; })[0]
+      || src.filter(function (s) { return s.type === "ticket"; })[0]
+      || orderedSources(item)[0];
   }
 
   function markHedges(text, terms) {
-    if (!terms.length) return [text];
+    if (!terms || !terms.length) return [text];
     var lower = text.toLowerCase();
     var hits = [];
     terms.forEach(function (term) {
@@ -390,7 +276,6 @@
     });
     if (!hits.length) return [text];
     hits.sort(function (a, b) { return a[0] - b[0]; });
-
     var out = [], cursor = 0;
     hits.forEach(function (h) {
       if (h[0] < cursor) return;
@@ -402,345 +287,253 @@
     return out;
   }
 
-  // ── evidence panel (RPT-05) ──────────────────────────────────────────
-
-  function evidencePanel(item, week) {
-    var panel = el("section", { class: "panel" }, [
-      el("h5", { class: "u-caps panel__head", text: "Evidence — one block per source, in precedence order" })
+  function transcriptEvidence(s, item) {
+    var terms = (item.hedge && item.hedge.present && item.hedge.quote === s.quote)
+      ? item.hedge.terms || [] : [];
+    var block = el("div", { class: "quote" }, [
+      append(el("p", { class: "quote__text" }), markHedges("“" + s.quote + "”", terms)),
+      el("p", {
+        class: "quote__who",
+        text: s.speaker + " · week " + s.week + ", line " + s.line + (s.timestamp ? ", " + s.timestamp : "")
+      })
     ]);
 
-    var ordered = item.sources.slice().sort(function (a, b) {
-      return SOURCE_ORDER[a.type] - SOURCE_ORDER[b.type];
-    });
-    ordered.forEach(function (s) { panel.appendChild(sourceBlock(s, item, week)); });
+    // Two lines either side, so the quote can be judged where it was said.
+    var tr = data && data.transcripts ? data.transcripts[s.week] : null;
+    if (!tr) return block;
+    var lines = tr.lines, idx = -1;
+    for (var i = 0; i < lines.length; i++) { if (lines[i].line === s.line) { idx = i; break; } }
+    if (idx < 0) return block;
 
-    if (item.contradiction && item.contradiction.present) {
-      panel.appendChild(el("div", { class: "conflict" }, [
-        el("b", { text: "Sources conflict" }),
-        el("p", { text: item.contradiction.statement }),
-        el("p", {}, [
-          el("span", { class: "u-caps", text: "Precedence " }),
-          "the " + item.contradiction.precedence + " record is taken as precedent. ",
-          el("span", { class: "u-caps", text: "Routed to " }),
-          item.contradiction.routed_to + "."
-        ])
+    var ctx = el("div", { class: "quote__ctx" });
+    for (var j = Math.max(0, idx - 2); j <= Math.min(lines.length - 1, idx + 2); j++) {
+      if (j === idx) continue;
+      var l = lines[j];
+      ctx.appendChild(el("p", { class: "quote__ctx-line" }, [
+        el("span", { class: "who", text: l.timestamp + " " + l.speaker + ": " }),
+        l.text
       ]));
     }
-    return panel;
+    block.appendChild(ctx);
+    return block;
   }
 
-  function sourceBlock(s, item, week) {
-    var block = el("div", { class: "src" });
+  function ticketEvidence(s) {
+    var rows = el("div", { class: "record" });
+    rows.appendChild(recordRow("cited field", s.field + " = " + s.value));
+    var t = (data && data.tickets || []).filter(function (r) { return r.ticket_id === s.ticket_id; })[0];
+    if (t) {
+      var asAt = data.registers[currentWeek] ? data.registers[currentWeek].date : null;
+      append(rows, [
+        recordRow("title", t.title),
+        recordRow("workstream", wsLabel(t.workstream)),
+        recordRow("status", t.status),
+        recordRow("assignee role", t.assignee_role || "unassigned"),
+        recordRow("created", t.created_date),
+        recordRow("status changed", t.status_changed_date),
+        asAt ? recordRow("days since transition", String(daysBetween(t.status_changed_date, asAt))) : null,
+        recordRow("due", t.due_date || "no due date"),
+        recordRow("blocked by", t.blocked_by || "nothing")
+      ]);
+    }
+    if (s.observation) rows.appendChild(recordRow("observation", s.observation));
+    return rows;
+  }
 
+  function recordRow(k, v) {
+    return el("div", { class: "record__row" }, [
+      el("span", { class: "record__k", text: k }),
+      el("span", { class: "record__v", text: v })
+    ]);
+  }
+
+  function sourceSummary(s) {
     if (s.type === "transcript") {
-      append(block, [
-        el("div", { class: "src__type", text: "Transcript — week " + s.week + ", line " + s.line }),
-        transcriptContext(s, item)
-      ]);
-    } else if (s.type === "ticket") {
-      append(block, [
-        el("div", { class: "src__type", text: "Ticket — " + s.ticket_id }),
-        el("p", { class: "src__obs", text: s.observation }),
-        ticketFields(s, week)
-      ]);
-    } else if (s.type === "board") {
-      append(block, [
-        el("div", { class: "src__type", text: "Board — reported status" }),
-        el("div", { class: "fields" }, [
-          fieldRow("workstream", wsLabel(s.workstream)),
-          fieldRow("reported", s.status),
-          fieldRow("as at", s.date)
-        ]),
-        s.observation ? el("p", { class: "src__obs", text: s.observation }) : null
-      ]);
-    } else {
-      append(block, [
-        el("div", { class: "src__type", text: "Metadata — run-level observation" }),
-        el("div", { class: "fields" }, [
-          fieldRow("measure", s.measure),
-          fieldRow("value", s.value)
-        ]),
-        el("p", { class: "src__obs", text: s.observation })
-      ]);
+      return "transcript, " + s.speaker + " week " + s.week + " line " + s.line;
+    }
+    if (s.type === "ticket") {
+      return "ticket " + s.ticket_id + " — " + s.observation;
+    }
+    if (s.type === "board") {
+      return "board, " + wsLabel(s.workstream) + " reported " + s.status + " on " + s.date;
+    }
+    return "metadata, " + s.measure + " = " + s.value + " — " + s.observation;
+  }
+
+  function evidenceBlock(item) {
+    var primary = primarySource(item);
+    var block = el("div", { class: "detail__block" }, [
+      el("h4", { class: "detail__head", text: "Evidence" })
+    ]);
+
+    if (primary.type === "transcript") block.appendChild(transcriptEvidence(primary, item));
+    else if (primary.type === "ticket") block.appendChild(ticketEvidence(primary));
+    else block.appendChild(el("p", { class: "quote__text", text: sourceSummary(primary) }));
+
+    var rest = orderedSources(item).filter(function (s) { return s !== primary; });
+    if (rest.length) {
+      block.appendChild(el("p", { class: "also" }, [
+        el("b", { text: "Also: " }),
+        rest.map(sourceSummary).join("; ") + "."
+      ]));
     }
     return block;
   }
 
-  function transcriptContext(s, item) {
-    var transcript = data.transcripts[s.week];
-    var wrap = el("div", { class: "lines" });
-    if (!transcript) {
-      return append(wrap, el("p", { class: "src__obs", text: "“" + s.quote + "” — " + s.speaker }));
-    }
-    var lines = transcript.lines;
-    var idx = -1;
-    for (var i = 0; i < lines.length; i++) { if (lines[i].line === s.line) { idx = i; break; } }
-    if (idx < 0) {
-      return append(wrap, el("p", { class: "src__obs", text: "“" + s.quote + "” — " + s.speaker }));
-    }
-
-    var terms = (item.hedge && item.hedge.present && item.hedge.quote === s.quote) ? item.hedge.terms || [] : [];
-    for (var j = Math.max(0, idx - 2); j <= Math.min(lines.length - 1, idx + 2); j++) {
-      var l = lines[j];
-      var cited = j === idx;
-      wrap.appendChild(el("div", { class: "lines__line" + (cited ? " is-cited" : "") }, [
-        el("span", { class: "lines__stamp", text: l.timestamp + " · l." + l.line }),
-        el("span", { class: "lines__text" }, [
-          el("span", { class: "lines__who", text: l.speaker }),
-          append(el("span", {}), cited ? markHedges(l.text, terms) : [l.text])
-        ])
-      ]));
-    }
-    return wrap;
-  }
-
-  function ticketFields(s, week) {
-    var wrap = el("div", { class: "fields" });
-    var t = data.tickets.filter(function (r) { return r.ticket_id === s.ticket_id; })[0];
-    var asAt = data.registers[week].date;
-
-    wrap.appendChild(fieldRow("cited field", s.field + " = " + s.value));
-    if (!t) return wrap;
-
-    append(wrap, [
-      fieldRow("title", t.title),
-      fieldRow("workstream", wsLabel(t.workstream)),
-      fieldRow("status", t.status),
-      fieldRow("assignee role", t.assignee_role || "unassigned"),
-      fieldRow("created", t.created_date),
-      fieldRow("status changed", t.status_changed_date),
-      fieldRow("days since transition", String(daysBetween(t.status_changed_date, asAt))),
-      fieldRow("due", t.due_date || "no due date"),
-      fieldRow("blocked by", t.blocked_by || "nothing")
-    ]);
-    return wrap;
-  }
-
-  function fieldRow(k, v) {
-    return el("div", { class: "fields__row" }, [
-      el("span", { class: "fields__k", text: k }),
-      el("span", { class: "fields__v", text: v })
-    ]);
-  }
-
-  // ── arithmetic panel (RPT-06) ────────────────────────────────────────
-
-  function arithmeticPanel(item) {
+  function assessmentBlock(item, week) {
     var c = item.computed;
-    var panel = el("section", { class: "panel" }, [
-      el("h5", { class: "u-caps panel__head", text: "Arithmetic — every factor, its weight and the anchor it was scored against" })
-    ]);
-    var sum = el("div", { class: "sum" });
+    var dl = el("dl", { class: "dl" });
 
     if (item.type === "risk") {
-      sum.appendChild(el("div", { class: "sum__line sum__total" }, [
-        el("span", { text: "exposure" }),
-        el("span", { text: "impact " + item.impact }),
-        el("span", { text: "× " + item.likelihood }),
-        el("span", { text: "= " + c.exposure + "/25" })
-      ]));
-      sum.appendChild(el("div", {
-        class: "sum__note",
-        text: "Bands: 15–25 critical, 10–14 high, 5–9 medium, 1–4 low. " +
-              c.exposure + " puts this item in the " + c.band + " band."
-      }));
-      sum.appendChild(el("div", { class: "sum__rule" }));
+      append(dl, [
+        el("dt", { text: "Exposure" }),
+        el("dd", {}, [
+          el("span", { class: "u-num", text: item.impact + " × " + item.likelihood + " = " + c.exposure }),
+          " of 25, " + c.band
+        ])
+      ]);
+    } else if (item.type === "issue") {
+      append(dl, [
+        el("dt", { text: "Impact" }),
+        el("dd", {}, [el("span", { class: "u-num", text: String(item.impact) }), " of 5"])
+      ]);
+    } else if (item.type === "dependency") {
+      append(dl, [
+        el("dt", { text: "Criticality" }),
+        el("dd", {}, [
+          el("span", { class: "u-num", text: String(item.criticality) }),
+          " of 5, " + CRITICALITY_WORD[item.criticality]
+        ]),
+        el("dt", { text: "Waiting" }),
+        el("dd", {
+          text: wsLabel(item.waiting_workstream) + " on " + wsLabel(item.counterparty) +
+                " since week " + item.week_started + (item.blocking ? ". Blocking: work cannot proceed." : ".")
+        })
+      ]);
+    } else {
+      var cov = item.coverage;
+      append(dl, [
+        el("dt", { text: "Coverage" }),
+        el("dd", {}, [
+          el("span", { class: "u-num", text: mmss(cov.airtime_seconds) }),
+          " airtime · ",
+          el("span", { class: "u-num", text: String(cov.transitions) }),
+          " ticket transitions",
+          cov.carried_unverifiable ? " · " + cov.carried_unverifiable + " carried items unverifiable" : "",
+          cov.downstream_unconfirmed ? " · " + cov.downstream_unconfirmed + " downstream dependencies unconfirmed" : ""
+        ])
+      ]);
     }
 
-    var anchors = item.attention_factors.anchors || {};
-    c.attention_terms.forEach(function (t) {
-      var line = el("div", { class: "sum__line" }, [
-        el("span", { text: t.factor.replace(/_/g, " ") }),
-        el("span", { text: String(t.score) }),
-        el("span", { text: "× " + t.weight }),
-        el("span", { text: "= " + t.product.toFixed(2) })
-      ]);
-      var d = el("details", {}, [
-        el("summary", {}, line),
-        el("p", { class: "sum__anchor", text: anchors[t.factor] || "Anchor not recorded for this factor." })
-      ]);
-      sum.appendChild(d);
-    });
+    var terms = c.attention_terms.map(function (t) {
+      return t.factor.replace(/_/g, " ") + " " + t.score + "×" + t.weight;
+    }).join(" · ");
+    append(dl, [
+      el("dt", { text: "Attention" }),
+      el("dd", {}, [
+        el("span", { class: "u-num", text: c.attention.toFixed(2) }),
+        " of 5",
+        el("span", { class: "dl__sub", text: terms })
+      ]),
+      el("dt", { text: "Owner" }),
+      el("dd", { text: item.owner.role ? item.owner.role : "Unowned" }),
+      el("dt", { text: "Control" }),
+      el("dd", { text: item.control.anchor || (item.control.text || "Nothing stated.") })
+    ]);
 
-    sum.appendChild(el("div", { class: "sum__line sum__rule sum__total" }, [
-      el("span", { text: "attention" }),
-      el("span", { text: "" }),
-      el("span", { text: "" }),
-      el("span", { text: c.attention.toFixed(2) + " / 5" })
-    ]));
-    sum.appendChild(el("div", {
-      class: "sum__note",
-      text: "Both totals are computed in code from the model's factor scores, never by the model. " +
-            "Attention orders items inside a band; it never modifies exposure."
-    }));
-
-    if (item.control.anchor) {
-      sum.appendChild(el("div", { class: "sum__note", text: "Control status anchor: " + item.control.anchor }));
-    }
     if (item.hedge && item.hedge.present) {
-      sum.appendChild(el("div", {
-        class: "sum__note",
-        text: "Hedge terms matched: " + item.hedge.terms.join(", ") + ". " +
-              (item.hedge.cap_applied
-                ? "The only supporting evidence is hedged, so likelihood is capped at 3."
-                : "Corroborating evidence of another source type exists, so no cap applies.")
-      }));
-    }
-    if (item.reclassified) {
-      sum.appendChild(el("div", {
-        class: "sum__note",
-        text: "Reclassified in week " + item.reclassified.week + " from " + item.reclassified.from_type +
-              (item.reclassified.from_id ? " (" + item.reclassified.from_id + ")" : "") +
-              ". Trigger: " + item.reclassified.trigger + "."
-      }));
+      append(dl, [
+        el("dt", { text: "Hedged" }),
+        el("dd", {
+          text: item.hedge.terms.join(", ") + ". " + (item.hedge.cap_applied
+            ? "The only supporting evidence is hedged, so likelihood is capped at 3."
+            : "Corroborated by another source type, so no cap applies.")
+        })
+      ]);
     }
 
-    panel.appendChild(sum);
-    return panel;
+    return el("div", { class: "detail__block" }, [
+      el("h4", { class: "detail__head", text: "Assessment" }),
+      dl
+    ]);
   }
-
-  // ── acceptance controls (RPT-07) ─────────────────────────────────────
 
   function adjudicateBlock(item, week) {
     var acc = acceptanceFor(week, item);
-    var fs = el("fieldset", { class: "row__adjudicate" });
-    fs.appendChild(el("legend", { class: "u-sr", text: "Adjudicate " + item.id }));
+    var fs = el("fieldset", { class: "adj" }, [
+      el("legend", { class: "u-sr", text: "Adjudicate " + item.id })
+    ]);
+
+    var btns = el("div", { class: "adj__btns" });
+    [["accepted", "Accept"], ["amended", "Amend"], ["rejected", "Reject"]].forEach(function (pair) {
+      btns.appendChild(el("button", {
+        type: "button", class: "adj__btn", "data-act": pair[0],
+        "aria-pressed": acc.state === pair[0] ? "true" : "false",
+        text: pair[1]
+      }));
+    });
+    fs.appendChild(btns);
 
     var word = acc.state.charAt(0).toUpperCase() + acc.state.slice(1);
     var detail = "";
     if (acc.by) detail += " · " + acc.by;
     if (acc.at) detail += " " + acc.at;
     if (acc.carried_from_week) detail += " · carried from week " + acc.carried_from_week;
-    fs.appendChild(el("span", { class: "adj__state is-" + acc.state, text: word + detail }));
-
-    /* Amending and rejecting each need a written note, captured inline rather
-       than in a modal: a dialog is unavailable in a sandboxed frame, and the
-       note belongs beside the row it changes. */
-
-    var buttons = el("div", { class: "adj__buttons" });
-    [["accepted", "Accept"], ["amended", "Amend"], ["rejected", "Reject"]].forEach(function (pair) {
-      var state = pair[0];
-      buttons.appendChild(el("button", {
-        type: "button",
-        class: "adj__btn",
-        "data-act": state,
-        "aria-pressed": acc.state === state ? "true" : "false",
-        text: pair[1]
-      }));
-    });
-    fs.appendChild(buttons);
+    fs.appendChild(el("span", { class: "adj__state", text: word + detail }));
 
     if (acc.note) {
       fs.appendChild(el("p", { class: "adj__note" }, [
         acc.state === "amended" ? "Amendment: " : "Reason: ", acc.note
       ]));
     }
+    if (acc.state === "amended" && acc.note) {
+      fs.appendChild(el("p", { class: "adj__note" }, [
+        "The run said: ", el("del", { text: item.statement })
+      ]));
+    }
     fs.appendChild(el("div", { class: "adj__form", hidden: true }));
     return fs;
   }
 
-  function openNoteForm(row, state) {
-    var host = row.querySelector(".adj__form");
-    var itemId = row.id.replace("item-", "");
-    var acc = acceptanceFromRow(row);
-    clear(host);
-    host.hidden = false;
-
-    var id = "note-" + state + "-" + itemId;
-    var label = state === "amended"
-      ? "Amendment. The run's own wording is kept and struck through; it is never erased."
-      : "Reason for rejection. The row stays on the record with the reason attached.";
-
-    var input = el("input", {
-      type: "text",
-      id: id,
-      class: "adj__input",
-      value: (acc.note && acc.state === state) ? acc.note : "",
-      placeholder: state === "amended" ? "What you changed, and why" : "Why this is not a register item"
-    });
-
-    function commit() {
-      var text = input.value.trim();
-      setAcceptance(currentWeek, { id: itemId }, state, text ||
-        (state === "amended" ? "Amended without a note." : "Rejected without a stated reason."));
-      refreshRow(row);
-    }
-
-    var save = el("button", { type: "button", class: "adj__btn", text: "Save" });
-    save.addEventListener("click", commit);
-    var cancel = el("button", { type: "button", class: "adj__btn", text: "Cancel" });
-    cancel.addEventListener("click", function () { host.hidden = true; clear(host); });
-
-    input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") { e.preventDefault(); commit(); }
-      if (e.key === "Escape") { host.hidden = true; clear(host); }
-    });
-
-    append(host, [
-      el("label", { class: "adj__label", "for": id, text: label }),
-      el("div", { class: "adj__row" }, [input, save, cancel])
-    ]);
-    input.focus();
-  }
-
-  // ── row ──────────────────────────────────────────────────────────────
-
-  function rowNode(item, week) {
+  function rowNode(item, week, closed) {
     var acc = acceptanceFor(week, item);
-    var alarm = (item.contradiction && item.contradiction.present) ||
-                (item.type === "dependency" && item.blocking) ||
-                item.type === "assurance-gap" ||
-                (item.computed.band === "critical");
+    var sp = scoreParts(item, closed);
 
-    var classes = ["row", "row--" + item.type];
-    if (alarm && item.movement.state !== "resolved") classes.push("is-alarm");
-    if (acc.state === "rejected") classes.push("is-rejected");
-    if (item.movement.state === "resolved") classes.push("is-resolved");
-
-    var article = el("article", { class: classes.join(" "), id: "item-" + item.id });
-
-    var head = el("header", { class: "row__head" }, [el("span", { class: "row__id", text: item.id })]);
-    chipsFor(item, acc).forEach(function (c) { head.appendChild(c); });
-
-    var titleWrap = el("div", { class: "row__title" }, [
-      el("h4", { text: item.title }),
-      el("p", { class: "row__statement", text: item.statement })
-    ]);
-    if (acc.state === "amended" && acc.note) {
-      titleWrap.appendChild(el("p", { class: "adj__note" }, [
-        "The run said: ", el("del", { text: item.statement })
-      ]));
-    }
-
-    // Identity, title and quote are one column, not three grid rows a tall
-    // score or meta column can inflate. Below 900px .row__main becomes
-    // display:contents so these three can be reordered around the score and
-    // meta bands, per the design plan's collapse order.
-    var facts = factsLine(item);
-    if (facts) titleWrap.appendChild(facts);
-    var main = el("div", { class: "row__main" }, [head, titleWrap]);
-    var q = quoteBlock(item);
-    if (q) main.appendChild(q);
-    article.appendChild(main);
-
-    article.appendChild(scoreBlock(item));
-    article.appendChild(metaBlock(item));
-
-    var details = el("details", { class: "row__evidence" }, [
-      el("summary", { text: "Evidence & arithmetic" })
-    ]);
-    /* Built up front so the panels are in the document rather than waiting on
-       a click: <details> needs no JavaScript to open, so a reader without it
-       still reaches the evidence. */
-    details.appendChild(evidencePanel(item, week));
-    details.appendChild(arithmeticPanel(item));
-    article.appendChild(details);
-
-    article.appendChild(adjudicateBlock(item, week));
-    /* The run's own acceptance travels with the row, so a page that was
-       painted server-side can be adjudicated before any JSON has loaded. */
+    var article = el("article", {
+      class: "row" + (acc.state === "rejected" ? " is-rejected" : ""),
+      id: "item-" + item.id
+    });
     article.setAttribute("data-acc", JSON.stringify(item.acceptance));
-    article.setAttribute("data-statement", item.statement);
+
+    article.appendChild(el("div", { class: "row__score" }, [
+      el("span", { class: "row__num " + sp.tone, text: sp.num }),
+      el("span", { class: "row__scale", text: sp.label })
+    ]));
+
+    var body = el("div", { class: "row__body" }, [
+      el("h3", { class: "row__title", text: item.title }),
+      metaLine(item)
+    ]);
+
+    /* Built up front rather than on click: <details> opens without script, so
+       a reader with JavaScript off still reaches the evidence. */
+    var more = el("details", { class: "row__more" }, [
+      el("summary", { text: item.id + " · detail" })
+    ]);
+    append(more, el("div", { class: "detail" }, [
+      reclassNote(item),
+      contradictionNote(item),
+      el("div", { class: "detail__block" }, [
+        el("h4", { class: "detail__head", text: "Statement" }),
+        el("p", { text: item.statement })
+      ]),
+      evidenceBlock(item),
+      assessmentBlock(item, week),
+      adjudicateBlock(item, week)
+    ]));
+    body.appendChild(more);
+
+    article.appendChild(body);
     return article;
   }
 
@@ -748,162 +541,126 @@
 
   function render() {
     var reg = data.registers[currentWeek];
-    renderMasthead(reg);
-    renderWeekbar();
-    renderCoverage(reg);
+    renderHead(reg);
+    renderWeeks();
+    renderAlert(reg);
     renderRegister(reg);
+    renderCoverage(reg);
     renderOmissions(reg);
   }
 
-  function renderMasthead(reg) {
-    var counts = clear(document.getElementById("masthead-counts"));
+  function renderHead(reg) {
     var unaccepted = reg.items.filter(function (i) {
       return acceptanceFor(reg.week, i).state === "unaccepted";
     }).length;
-
-    append(counts, [
-      el("dt", { class: "u-sr", text: "Week" }),
-      el("dd", {}, ["Week ", el("span", { class: "u-num", text: String(reg.week) }), " of 4"]),
-      el("dt", { class: "u-sr", text: "Run" }),
-      el("dd", {}, ["run ", el("span", { class: "u-num", text: reg.date }), " · two-pass"]),
-      el("dt", { class: "u-sr", text: "Items" }),
-      el("dd", {}, [el("span", { class: "u-num", text: String(reg.items.length) }), " items · ",
-                    el("span", { class: "u-num", text: String(unaccepted) }), " unaccepted"])
-    ]);
+    clear(document.getElementById("head-sub")).appendChild(
+      el("span", {}, [
+        "Week " + reg.week + " of 4 · run ",
+        el("span", { class: "u-num", text: reg.date }),
+        " · " + reg.items.length + " items, " + unaccepted + " not yet adjudicated"
+      ])
+    );
   }
 
-  function renderWeekbar() {
+  function renderWeeks() {
     var bar = clear(document.getElementById("weekbar"));
     WEEKS.forEach(function (w) {
       bar.appendChild(el("button", {
-        type: "button",
-        class: "weekbar__btn",
-        "data-week": w,
+        type: "button", class: "weeks__btn", "data-week": w,
         "aria-current": w === currentWeek ? "true" : "false",
-        text: "W" + w
+        text: "Week " + w
       }));
     });
-    document.getElementById("weekbar-date").textContent = data.registers[currentWeek].date;
+  }
+
+  /* Absence is the finding a delivery manager needs first, so it sits above
+     the register rather than inside it. */
+  function renderAlert(reg) {
+    var host = clear(document.getElementById("alert"));
+    var cov = reg.coverage;
+    var quiet = Object.keys(cov.airtime_seconds).filter(function (ws) {
+      return cov.airtime_seconds[ws] < AIRTIME_FLOOR || cov.transitions[ws] === 0;
+    });
+    if (!quiet.length) return;
+
+    host.appendChild(el("p", {}, [
+      el("b", { text: quiet.length + " of " + cov.workstreams_total + " workstreams did not report" }),
+      ". " + sentence(quiet.map(wsLabel)) +
+      (quiet.length === 1 ? " gave" : " gave") + " too little to verify. Their state is unknown, not green."
+    ]));
+  }
+
+  function renderRegister(reg) {
+    var host = clear(document.getElementById("register"));
+    var closed = reg.items.filter(function (i) { return i.movement.state === "resolved"; });
+    var live = reg.items.filter(function (i) { return i.movement.state !== "resolved"; });
+
+    SECTIONS.forEach(function (sec) {
+      var items = sec.key === "closed" ? closed
+        : live.filter(function (i) { return i.type === sec.key; });
+
+      var section = el("section", { class: "section" }, [
+        el("div", { class: "section__head" }, [
+          el("h2", { class: "section__name", text: sec.name }),
+          el("span", { class: "section__scale", text: sec.scale })
+        ])
+      ]);
+
+      if (!items.length) {
+        section.appendChild(el("p", { class: "empty", text: sec.empty }));
+      } else {
+        items.forEach(function (item) {
+          section.appendChild(rowNode(item, reg.week, sec.key === "closed"));
+        });
+      }
+      host.appendChild(section);
+    });
   }
 
   function renderCoverage(reg) {
     var cov = reg.coverage;
-    var strip = clear(document.getElementById("coverage"));
-    var reporting = cov.workstreams_reporting + " of " + cov.workstreams_total;
-
-    [
-      ["airtime", mmss(cov.airtime_total_seconds) + " / " + Math.round(cov.meeting_duration_seconds / 60) + "m", false],
-      ["transitions", String(cov.transitions_total), false],
-      ["workstreams reporting", reporting, false],
-      ["unverified", String(cov.unverified_count), cov.unverified_count > 0]
-    ].forEach(function (s) {
-      var stat = el("div", { class: "coverage__stat" + (s[2] ? " coverage__stat--alarm" : "") }, [
-        el("dt", { text: s[0] }),
-        el("dd", { text: s[1] })
-      ]);
-      strip.appendChild(stat);
-    });
-
-    strip.appendChild(el("button", {
-      type: "button", class: "coverage__more",
-      "aria-expanded": "false", "aria-controls": "coverage-detail",
-      text: "Coverage & gaps"
-    }));
-    var detail = document.getElementById("coverage-detail");
-    clear(detail);
-    renderCoverageDetail(reg, detail);
-    detail.hidden = true;
-  }
-
-  function renderCoverageDetail(reg, host) {
-    var cov = reg.coverage;
-    clear(host);
-    var table = el("table", {}, [
-      el("thead", {}, el("tr", {}, [
-        el("th", { text: "Workstream" }),
-        el("th", { text: "Airtime" }),
-        el("th", { text: "Transitions" }),
-        el("th", { text: "Opened" }),
-        el("th", { text: "Closed" }),
-        el("th", { text: "Board" })
-      ]))
+    var host = clear(document.getElementById("coverage-detail"));
+    var table = el("div", { class: "cov" }, [
+      el("div", { class: "cov__row is-head" }, [
+        el("span", { text: "Workstream" }),
+        el("span", { text: "Airtime" }),
+        el("span", { text: "Moves" }),
+        el("span", { text: "Board" })
+      ])
     ]);
-    var body = el("tbody");
     Object.keys(cov.airtime_seconds).forEach(function (ws) {
-      body.appendChild(el("tr", {}, [
-        el("td", { "data-label": "Workstream", text: wsLabel(ws) }),
-        el("td", { class: "u-num", "data-label": "Airtime", text: mmss(cov.airtime_seconds[ws]) }),
-        el("td", { class: "u-num", "data-label": "Transitions", text: String(cov.transitions[ws]) }),
-        el("td", { class: "u-num", "data-label": "Opened", text: String((cov.opened || {})[ws] === undefined ? "—" : cov.opened[ws]) }),
-        el("td", { class: "u-num", "data-label": "Closed", text: String((cov.closed || {})[ws] === undefined ? "—" : cov.closed[ws]) }),
-        el("td", { "data-label": "Board", text: (cov.board || {})[ws] || "—" })
+      var under = cov.airtime_seconds[ws] < AIRTIME_FLOOR || cov.transitions[ws] === 0;
+      table.appendChild(el("div", { class: "cov__row" }, [
+        el("span", { class: under ? "is-under" : null, text: wsLabel(ws) + (under ? " — not reporting" : "") }),
+        el("span", { class: "u-num", text: mmss(cov.airtime_seconds[ws]) }),
+        el("span", { class: "u-num", text: String(cov.transitions[ws]) }),
+        el("span", { text: (cov.board || {})[ws] || "—" })
       ]));
     });
-    table.appendChild(body);
-
     append(host, [
-      el("div", { class: "dialog" }, [
-        el("h3", { class: "u-caps", text: "Coverage by workstream" }),
-        table,
-        el("p", { class: "sum__note", text: "A workstream under 2 minutes of airtime, or with no ticket transitions in the week, is reported as an assurance gap rather than scored." }),
-        el("h3", { class: "u-caps", text: "Unverified this week — " + reg.gaps.length }),
-        el("div", { class: "omissions__list" }, reg.gaps.map(gapNode))
+      table,
+      el("p", { class: "note__lede" }, [
+        "Meeting airtime totalled ",
+        el("span", { class: "u-num", text: mmss(cov.airtime_total_seconds) }),
+        " of " + Math.round(cov.meeting_duration_seconds / 60) + " minutes, against ",
+        el("span", { class: "u-num", text: String(cov.transitions_total) }),
+        " ticket transitions. A workstream under two minutes of airtime, or with no ticket " +
+        "movement, is reported as an assurance gap rather than scored."
       ])
     ]);
   }
 
-  function renderRegister(reg) {
-    var main = clear(document.getElementById("register"));
-
-    GROUPS.forEach(function (g) {
-      var items = reg.items.filter(function (i) { return i.type === g.type; });
-      var section = el("section", { class: "group", "aria-labelledby": "group-" + g.type });
-
-      section.appendChild(el("div", { class: "group__head" }, [
-        el("h2", { class: "group__name", id: "group-" + g.type, text: g.name }),
-        el("span", { class: "group__count", text: String(items.length) }),
-        el("span", { class: "group__scale", text: g.scale })
-      ]));
-      if (g.note) section.appendChild(el("p", { class: "group__note", text: g.note }));
-
-      if (!items.length) {
-        section.appendChild(el("p", { class: "group__empty", text: g.empty }));
-      } else {
-        section.appendChild(el("div", { class: "colheads" }, [
-          el("span", { text: "Item, type, movement" }),
-          el("span", { text: "Score & control" }),
-          el("span", { text: "Evidence & state" })
-        ]));
-        items.forEach(function (item) {
-          section.appendChild(rowNode(item, reg.week));
-        });
-      }
-      main.appendChild(section);
-    });
-
-    if (reg.week === 1) {
-      main.insertBefore(
-        el("p", { class: "banner", text: "Week 1. No prior register exists, so every item is new. Movement should not be read as calm." }),
-        main.firstChild
-      );
-    }
-  }
-
   function renderOmissions(reg) {
-    var section = document.getElementById("omissions");
     var list = clear(document.getElementById("omissions-list"));
     var count = document.getElementById("omissions-count");
     if (count) count.textContent = String(reg.gaps.length);
-    section.hidden = reg.gaps.length === 0;
-    reg.gaps.forEach(function (g) { list.appendChild(gapNode(g)); });
-  }
-
-  function gapNode(g) {
-    return el("div", { class: "omissions__item" }, [
-      el("div", { class: "omissions__ref", text: g.ref }),
-      g.subject ? el("div", { class: "omissions__subject", text: g.subject }) : null,
-      el("p", { class: "omissions__reason", text: g.reason })
-    ]);
+    reg.gaps.forEach(function (g) {
+      list.appendChild(el("div", { class: "omit" }, [
+        el("span", { class: "omit__ref", text: g.ref }),
+        g.subject ? el("span", { class: "omit__subject", text: g.subject }) : null,
+        el("p", { class: "omit__reason", text: g.reason })
+      ]));
+    });
   }
 
   // ── routing ──────────────────────────────────────────────────────────
@@ -914,11 +671,8 @@
   }
 
   function goToWeek(w) {
-    if (window.location.hash !== "#week-" + w) {
-      window.location.hash = "week-" + w;  // hashchange does the rest
-    } else {
-      show(w);
-    }
+    if (window.location.hash !== "#week-" + w) window.location.hash = "week-" + w;
+    else show(w);
   }
 
   window.addEventListener("hashchange", function () {
@@ -961,10 +715,9 @@
   }
 
   /* Over http the committed files are the source of truth at view time, and
-     only the week being read is fetched: a reader on a mobile connection
-     downloads one register, not four (NFR-01). Weeks already held are not
-     re-fetched. From file:// fetch is blocked, so the same data, inlined at
-     build time, is loaded instead. Neither path reaches another origin. */
+     only the week being read is fetched. From file:// fetch is blocked, so
+     the same data, inlined at build time, is loaded instead. Neither path
+     reaches another origin. */
   var loading = {};
 
   function ensureWeek(week) {
@@ -1012,41 +765,34 @@
 
   function failed(err) {
     clear(document.getElementById("register")).appendChild(el("p", {
-      class: "banner",
-      text: "Run data did not load (" + err.message + "). Over http the report reads runs/week-N-register.json " +
-            "directly; from a bare filesystem it needs data.bundle.js, which is rebuilt with " +
-            "python3 tools/build_bundle.py."
+      class: "empty",
+      text: "Run data did not load (" + err.message + "). Over http the report reads " +
+            "runs/week-N-register.json directly; from a bare filesystem it needs " +
+            "data.bundle.js, rebuilt with python3 tools/build_bundle.py."
     }));
   }
 
   // ── delegation and hydration ─────────────────────────────────────────
 
   /* Every control is reached by delegation, so the same handlers drive markup
-     built here and markup shipped in the HTML. Nothing needs re-wiring after
-     a static first paint. */
+     built here and markup painted into the HTML at build time. */
   function bindControls() {
     document.addEventListener("click", function (e) {
       var t = e.target;
       if (!t || !t.closest) return;
-      var wk = t.closest(".weekbar__btn");
+
+      var wk = t.closest(".weeks__btn");
       if (wk) { goToWeek(Number(wk.getAttribute("data-week"))); return; }
-      var cov = t.closest(".coverage__more");
-      if (cov) {
-        var detail = document.getElementById("coverage-detail");
-        detail.hidden = !detail.hidden;
-        cov.setAttribute("aria-expanded", String(!detail.hidden));
-        return;
-      }
+
       var adj = t.closest(".adj__btn[data-act]");
-      if (adj) {
-        var row = adj.closest(".row");
-        var act = adj.getAttribute("data-act");
-        if (act === "accepted") {
-          setAcceptance(currentWeek, { id: row.id.replace("item-", "") }, act, null);
-          refreshRow(row);
-        } else {
-          openNoteForm(row, act);
-        }
+      if (!adj) return;
+      var row = adj.closest(".row");
+      var act = adj.getAttribute("data-act");
+      if (act === "accepted") {
+        setAcceptance(currentWeek, row.id.replace("item-", ""), act, null);
+        refreshRow(row);
+      } else {
+        openNoteForm(row, act);
       }
     });
   }
@@ -1057,39 +803,71 @@
     try { return JSON.parse(row.getAttribute("data-acc")); } catch (e) { return { state: "unaccepted" }; }
   }
 
-  /* Repaint one row's acceptance rather than the register, so an adjudication
-     never destroys the rest of the page or needs the week's JSON. */
-  function refreshRow(row) {
+  function openNoteForm(row, state) {
+    var host = row.querySelector(".adj__form");
+    var itemId = row.id.replace("item-", "");
     var acc = acceptanceFromRow(row);
-    var statement = row.getAttribute("data-statement") || "";
-    var fs = row.querySelector(".row__adjudicate");
-    var fresh = adjudicateBlock(
-      { id: row.id.replace("item-", ""), acceptance: acc, statement: statement },
-      currentWeek
-    );
-    row.replaceChild(fresh, fs);
+    clear(host);
+    host.hidden = false;
 
-    row.classList.toggle("is-rejected", acc.state === "rejected");
-    var title = row.querySelector(".row__title");
-    var struck = title.querySelector(".adj__note");
-    if (struck) title.removeChild(struck);
-    if (acc.state === "amended" && acc.note) {
-      title.appendChild(el("p", { class: "adj__note" }, ["The run said: ", el("del", { text: statement })]));
+    var id = "note-" + state + "-" + itemId;
+    var input = el("input", {
+      type: "text", id: id, class: "adj__input",
+      value: (acc.note && acc.state === state) ? acc.note : "",
+      placeholder: state === "amended" ? "What you changed, and why" : "Why this is not a register item"
+    });
+
+    function commit() {
+      var text = input.value.trim();
+      setAcceptance(currentWeek, itemId, state, text ||
+        (state === "amended" ? "Amended without a note." : "Rejected without a stated reason."));
+      refreshRow(row);
     }
-    refreshUnacceptedCount();
+
+    var save = el("button", { type: "button", class: "adj__btn", text: "Save" });
+    save.addEventListener("click", commit);
+    var cancel = el("button", { type: "button", class: "adj__btn", text: "Cancel" });
+    cancel.addEventListener("click", function () { host.hidden = true; clear(host); });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); commit(); }
+      if (e.key === "Escape") { host.hidden = true; clear(host); }
+    });
+
+    append(host, [
+      el("label", {
+        class: "adj__label", "for": id,
+        text: state === "amended"
+          ? "Amendment. The run's own wording is kept and struck through; it is never erased."
+          : "Reason for rejection. The row stays on the record with the reason attached."
+      }),
+      el("div", { class: "adj__row" }, [input, save, cancel])
+    ]);
+    input.focus();
   }
 
-  function refreshUnacceptedCount() {
+  /* Repaint one row's acceptance rather than the register, so adjudicating
+     never destroys the page or needs the week's JSON. */
+  function refreshRow(row) {
+    var acc = acceptanceFromRow(row);
+    var statement = (row.querySelector(".detail__block p") || {}).textContent || "";
+    var fs = row.querySelector(".adj");
+    fs.parentNode.replaceChild(
+      adjudicateBlock({ id: row.id.replace("item-", ""), acceptance: acc, statement: statement }, currentWeek),
+      fs
+    );
+    row.classList.toggle("is-rejected", acc.state === "rejected");
+    refreshHeadCount();
+  }
+
+  function refreshHeadCount() {
     var rows = document.querySelectorAll(".row");
     var n = 0;
     Array.prototype.forEach.call(rows, function (r) {
       if (acceptanceFromRow(r).state === "unaccepted") n += 1;
     });
-    var dd = document.querySelectorAll("#masthead-counts dd");
-    var last = dd[dd.length - 1];
-    if (!last) return;
-    var nums = last.querySelectorAll(".u-num");
-    if (nums.length === 2) nums[1].textContent = String(n);
+    var sub = document.getElementById("head-sub");
+    if (!sub) return;
+    sub.textContent = sub.textContent.replace(/\d+ not yet adjudicated/, n + " not yet adjudicated");
   }
 
   /* A page painted at build time is already correct: adopt it rather than
@@ -1099,10 +877,28 @@
     return v ? Number(v) : null;
   }
 
+  /* The painted markup carries the run's own acceptance. Anything this
+     session has since decided lives in sessionStorage, so replay it over the
+     painted rows on load: adjudications must survive a refresh. */
+  function applyStoredAcceptance() {
+    var touched = false;
+    Array.prototype.forEach.call(document.querySelectorAll(".row"), function (row) {
+      if (acceptance[currentWeek + ":" + row.id.replace("item-", "")]) {
+        refreshRow(row);
+        touched = true;
+      }
+    });
+    if (!touched) refreshHeadCount();
+  }
+
   function start() {
     bindControls();
     var week = weekFromHash() || staticWeek() || 3;
-    if (staticWeek() === week) { currentWeek = week; return; }
+    if (staticWeek() === week) {
+      currentWeek = week;
+      applyStoredAcceptance();
+      return;
+    }
     show(week);
   }
 

@@ -34,8 +34,8 @@ DEFAULT_WEEK = 3
 # Every region app.js writes into. Emptied to build the shell, refilled from
 # the render.
 REGIONS = [
-    "masthead-counts", "weekbar", "weekbar-date", "coverage",
-    "coverage-detail", "register", "omissions-list", "omissions-count",
+    "head-sub", "weekbar", "alert", "register",
+    "coverage-detail", "omissions-list", "omissions-count",
 ]
 
 BEGIN = "<!-- static: painted by build.py, do not edit by hand -->"
@@ -82,8 +82,6 @@ def strip_static(html):
     html = re.sub(r'(<body[^>]*?) data-static-week="\d+"', r"\1", html)
     for rid in REGIONS:
         html = set_inner(html, rid, "")
-    # the omissions strip is hidden until a week is painted into it
-    html = re.sub(r'(<section class="omissions" id="omissions")(?! hidden)', r"\1 hidden", html)
     return html
 
 
@@ -152,8 +150,6 @@ def render(week, shell_html):
 def paint(html, week, painted):
     for rid in REGIONS:
         html = set_inner(html, rid, painted.get(rid, ""))
-    html = html.replace('<section class="omissions" id="omissions" hidden>',
-                        '<section class="omissions" id="omissions">')
     html = re.sub(r"<body([^>]*)>", r'<body\1 data-static-week="%d">' % week, html, count=1)
     html = html.replace("<body", BEGIN + "\n<body", 1)
     return html

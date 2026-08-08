@@ -1,541 +1,377 @@
-/* Risk Radar — the register as a document of record.
-   Tokens are exact and closed: no colour, size or spacing outside this block
-   appears anywhere else in the stylesheet. */
+/* Risk Radar — the register, read at a glance.
+   A row is a number, a title and one grey line. Everything else is behind
+   that row's disclosure. Colour lands on the number and on the two or three
+   meta words that warrant it, and nowhere else. */
 
 :root {
-  --paper: #FBFAF6;
-  --paper-sunk: #F3F1EA;
-  --ink: #17170F;
-  --ink-2: #3A382C;
-  --ink-3: #6B6656;
-  --rule: #C9C4B4;
-  --rule-faint: #E6E2D8;
-  --alarm: #A32E12;
-  --on-alarm: #FBFAF6;
-  --reclass: #F1E2C8;
-  --hedge: #F1E2C8;
+  color-scheme: light only;
 
-  /* Spectral, IBM Plex Sans and IBM Plex Mono are the intended faces. The
-     report makes no request to any origin but itself (NFR-05), so the roles
-     are held by system stacks with the same job: serif for prose, sans for
-     labels, mono with tabular figures for every number. */
+  --paper: #FFFFFF;
+  --sunk: #F7F6F2;
+  --ink: #16150F;
+  --ink-2: #6E6A5E;
+  --rule: #E4E1D8;
+  --rule-firm: #C6C2B6;
+
+  --red: #A32E12;
+  --amber: #8A5308;
+  --green: #2C6138;
+
+  /* Three roles, held by system stacks: loading a webfont would mean a
+     request to another origin, which this page never makes. */
   --font-text: Georgia, "Iowan Old Style", "Times New Roman", serif;
   --font-label: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-num: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
-  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
-  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
+  --measure: 660px;
 }
 
+/* The report is a printed page, not a themed surface. A dark viewer gets the
+   same light values rather than an inverted register. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #14140E;
-    --paper-sunk: #1D1D15;
-    --ink: #EFEDE4;
-    --ink-2: #C6C2B2;
-    --ink-3: #948E7C;
-    --rule: #3A382C;
-    --rule-faint: #2A2A20;
-    --alarm: #E8734F;
-    --on-alarm: #14140E;
-    --reclass: #3A3320;
-    --hedge: #3A3320;
+  :root {
+    --paper: #FFFFFF;
+    --sunk: #F7F6F2;
+    --ink: #16150F;
+    --ink-2: #6E6A5E;
+    --rule: #E4E1D8;
+    --rule-firm: #C6C2B6;
+    --red: #A32E12;
+    --amber: #8A5308;
+    --green: #2C6138;
   }
-}
-
-:root[data-theme="dark"] {
-  --paper: #14140E;
-  --paper-sunk: #1D1D15;
-  --ink: #EFEDE4;
-  --ink-2: #C6C2B2;
-  --ink-3: #948E7C;
-  --rule: #3A382C;
-  --rule-faint: #2A2A20;
-  --alarm: #E8734F;
-  --on-alarm: #14140E;
-  --reclass: #3A3320;
-  --hedge: #3A3320;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--paper);
+}
 
 body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-text);
-  font-size: 17px;
-  line-height: 1.55;
+  font: 17px/1.6 var(--font-text);
   overflow-wrap: anywhere;
 }
 
-/* No radius, no shadow, anywhere. Depth is rules only. */
-a { color: inherit; }
 h1, h2, h3, h4 { margin: 0; font-weight: 400; }
 p { margin: 0; }
 dl, dd, dt { margin: 0; }
 button { font: inherit; color: inherit; background: none; border: 0; }
 
 .page {
-  max-width: 1180px;
+  max-width: var(--measure);
+  min-width: 0;
   margin: 0 auto;
-  padding: var(--s7) var(--s6) var(--s8);
+  padding: 40px 20px 64px;
 }
 
 .u-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
-.u-label {
-  font-family: var(--font-label);
-  font-size: 12.5px;
-  letter-spacing: 0.06em;
-  line-height: 1.35;
-}
-.u-caps {
-  font-family: var(--font-label);
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
 .u-sr {
   position: absolute; width: 1px; height: 1px;
   padding: 0; margin: -1px; overflow: hidden;
   clip-path: inset(50%); white-space: nowrap;
 }
 
-/* ── masthead ───────────────────────────────────────────────────────── */
+/* ── header ─────────────────────────────────────────────────────────── */
 
-.masthead {
-  display: grid;
-  gap: var(--s3);
-  padding-bottom: var(--s5);
-  border-bottom: 3px double var(--ink);
-}
-.masthead__rail {
-  display: flex; flex-wrap: wrap; gap: var(--s3);
-  justify-content: space-between; align-items: baseline;
-  color: var(--ink-3);
-  font-family: var(--font-label);
-  font-size: 12.5px;
+.head { display: grid; gap: 10px; min-width: 0; }
+.head__rail {
+  font: 600 12.5px/1.3 var(--font-label);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-}
-.masthead__title {
-  font-size: clamp(34px, 5vw, 58px);
-  line-height: 1.06;
-  letter-spacing: -0.02em;
-  max-width: 22ch;
-  text-wrap: balance;
-}
-.masthead__sub { max-width: 66ch; color: var(--ink-2); text-wrap: pretty; }
-.masthead__counts {
-  display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4);
   color: var(--ink-2);
 }
+.head__title { font-size: 34px; line-height: 1.1; letter-spacing: -0.015em; }
+.head__sub { font: 13.5px/1.5 var(--font-label); color: var(--ink-2); }
 
-.banner {
-  margin-top: var(--s4);
-  padding: var(--s3) var(--s4);
-  border: 1px solid var(--rule);
-  background: var(--paper-sunk);
-  color: var(--ink-2);
-  font-family: var(--font-label);
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-
-/* ── week bar ───────────────────────────────────────────────────────── */
-
-.weekbar {
-  position: sticky; top: 0; z-index: 2;
-  display: flex; flex-wrap: wrap; gap: var(--s3);
-  align-items: center;
-  margin-top: var(--s5);
-  padding: var(--s3) 0;
-  background: var(--paper);
-  border-bottom: 1px solid var(--rule);
-}
-.weekbar__set { display: flex; gap: var(--s2); }
-.weekbar__btn {
+.weeks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; min-width: 0; }
+.weeks__btn {
   min-height: 44px;
-  padding: var(--s2) var(--s4);
-  border: 1px solid var(--rule);
+  padding: 0 16px;
+  border: 1px solid var(--rule-firm);
   background: var(--paper);
   color: var(--ink-2);
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
-  font-size: 14px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.weeks__btn[aria-current="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+/* ── the alert line ─────────────────────────────────────────────────── */
+
+.alert:not(:empty) {
+  margin-top: 24px;
+  padding: 14px 16px;
+  border-left: 3px solid var(--red);
+  background: var(--sunk);
+  color: var(--ink);
+  font: 14.5px/1.5 var(--font-label);
+  min-width: 0;
+}
+.alert b { font-weight: 600; color: var(--red); }
+
+/* ── sections ───────────────────────────────────────────────────────── */
+
+.section { margin-top: 44px; min-width: 0; }
+.section__head {
+  display: flex; flex-wrap: wrap; gap: 4px 16px;
+  justify-content: space-between; align-items: baseline;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--ink);
+  min-width: 0;
+}
+.section__name {
+  font: 600 12.5px/1.3 var(--font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.section__scale { font: 12.5px/1.3 var(--font-label); color: var(--ink-2); }
+.empty {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
+  font: 14.5px/1.5 var(--font-label);
+}
+
+/* ── a row ──────────────────────────────────────────────────────────── */
+
+.row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  column-gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--rule);
+  min-width: 0;
+  max-width: 100%;
+}
+.row.is-rejected { opacity: 0.6; }
+.row.is-rejected .row__title { text-decoration: line-through; }
+
+.row__score { min-width: 0; max-width: 100%; }
+.row__num {
+  display: block;
+  font: 500 27px/1 var(--font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.row__num.is-critical { color: var(--red); }
+.row__num.is-high { color: var(--amber); }
+.row__num.is-low, .row__num.is-closed { color: var(--green); }
+.row__num.is-unknown { color: var(--ink-2); }
+.row__scale {
+  display: block;
+  margin-top: 5px;
+  font: 12.5px/1.25 var(--font-label);
+  color: var(--ink-2);
+}
+
+.row__body { min-width: 0; max-width: 100%; }
+.row__title { font-size: 18px; line-height: 1.35; text-wrap: pretty; }
+.row__meta {
+  margin-top: 6px;
+  font: 13px/1.5 var(--font-label);
+  color: var(--ink-2);
+}
+/* Inherits the meta line's grey: a lighter separator failed AA contrast. */
+.row__meta .sep { padding: 0 6px; }
+.row__meta .is-conflict { color: var(--red); }
+.row__meta .is-unmanaged { color: var(--amber); }
+
+/* ── a row's disclosure ─────────────────────────────────────────────── */
+
+.row__more { margin-top: 0; min-width: 0; max-width: 100%; }
+.row__more > summary {
+  display: inline-block;
+  padding: 7px 0 2px;
+  color: var(--ink-2);
+  font: 12.5px/1.3 var(--font-label);
   letter-spacing: 0.04em;
   cursor: pointer;
 }
-.weekbar__btn[aria-current="true"] {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--paper);
-}
-.weekbar__date { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; }
+.row__more > summary::marker { color: var(--rule-firm); }
+.row__more[open] > summary { color: var(--ink); }
 
-/* ── coverage strip ─────────────────────────────────────────────────── */
-
-.coverage {
-  display: flex; flex-wrap: wrap;
-  gap: var(--s3) var(--s5);
-  align-items: baseline;
-  padding: var(--s4) 0;
-  border-bottom: 1px solid var(--rule-faint);
-}
-.coverage__stat { display: flex; gap: var(--s2); align-items: baseline; }
-.coverage__stat dt { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; }
-.coverage__stat dd { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 15px; }
-.coverage__stat--alarm dd { color: var(--alarm); }
-.coverage__more {
-  margin-inline-start: auto;
-  min-height: 44px; padding: var(--s2) var(--s3);
-  border: 1px solid var(--rule);
-  font-family: var(--font-label); font-size: 12.5px;
-  cursor: pointer;
-}
-
-/* ── groups ─────────────────────────────────────────────────────────── */
-
-.group { margin-top: var(--s7); }
-.group__head {
-  display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4);
-  align-items: baseline;
-  padding: var(--s3) 0;
-  border-top: 1px solid var(--ink);
-}
-.group__name { font-size: 22px; line-height: 1.2; font-weight: 500; }
-.group__count { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 22px; color: var(--ink-3); }
-.group__scale { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; letter-spacing: 0.06em; }
-.group__note { padding: var(--s2) 0 var(--s4); color: var(--ink-2); max-width: 66ch; }
-.group__empty { padding: var(--s4) 0; color: var(--ink-3); border-bottom: 1px solid var(--rule-faint); }
-
-.colheads {
+.detail {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 168px minmax(150px, 210px);
-  column-gap: var(--s5);
-  padding: var(--s2) 0;
-  border-bottom: 1px solid var(--rule-faint);
-  color: var(--ink-3);
-  font-family: var(--font-label);
-  font-size: 12.5px;
-  letter-spacing: 0.08em;
+  gap: 18px;
+  padding: 16px 18px 18px;
+  border-left: 2px solid var(--rule);
+  min-width: 0;
+  max-width: 100%;
+}
+.detail__head {
+  font: 600 12.5px/1.3 var(--font-label);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  color: var(--ink-2);
 }
+.detail__block { display: grid; gap: 8px; min-width: 0; }
 
-/* ── row ────────────────────────────────────────────────────────────── */
-
-/* The three columns are independent heights. Column one is a single cell, not
-   three rows a tall neighbour can inflate: when score and meta spanned rows,
-   a long meta column stranded up to 212px of empty space between the quote
-   and the disclosure. align-items: start keeps every column at its own
-   content height, so the row is only as tall as its tallest column. */
-.row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 168px minmax(150px, 210px);
-  grid-template-areas:
-    "main score meta"
-    "evid evid evid"
-    "adj  adj  adj";
-  align-items: start;
-  column-gap: var(--s5);
-  row-gap: var(--s2);
-  padding: var(--s4) var(--s5);
-  border-bottom: 1px solid var(--rule-faint);
-}
-.row__main {
-  grid-area: main;
-  display: grid;
-  align-content: start;
-  gap: var(--s2);
+.note-line {
+  padding: 12px 14px;
+  background: var(--sunk);
+  font: 14px/1.55 var(--font-label);
   min-width: 0;
 }
-.row.is-alarm {
-  border-inline-start: 3px solid var(--alarm);
-  padding-inline-start: 21px;
+.note-line.is-conflict { border-left: 3px solid var(--red); }
+.note-line b {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
-.row.is-rejected { opacity: 0.55; }
-.row.is-rejected .row__title { text-decoration: line-through; }
-.row.is-resolved { opacity: 0.72; }
+.note-line.is-conflict b { color: var(--red); }
 
-.row__head { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
-.row__id {
+/* Evidence */
+.quote { display: grid; gap: 6px; min-width: 0; }
+.quote__text {
+  font: 16px/1.55 var(--font-text);
+  padding-left: 12px;
+  border-left: 2px solid var(--rule-firm);
+}
+.quote__who { font: 12.5px/1.4 var(--font-label); color: var(--ink-2); }
+.quote__ctx { display: grid; gap: 3px; margin-top: 4px; }
+.quote__ctx-line { font: 13.5px/1.45 var(--font-text); color: var(--ink-2); }
+.quote__ctx-line .who { font-family: var(--font-label); font-size: 12px; }
+mark { background: #F3E7C6; color: var(--ink); padding: 0 2px; }
+
+.record { display: grid; gap: 4px; min-width: 0; }
+.record__row {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 4px 12px;
+  font: 13.5px/1.45 var(--font-label);
+  min-width: 0;
+}
+.record__k { color: var(--ink-2); }
+.record__v { font-family: var(--font-num); font-size: 13px; min-width: 0; }
+.also { font: 13px/1.5 var(--font-label); color: var(--ink-2); }
+.also b { font-weight: 600; color: var(--ink); }
+
+/* Assessment */
+.dl { display: grid; gap: 8px; min-width: 0; }
+.dl dt {
+  font: 12.5px/1.3 var(--font-label);
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+.dl dd { font: 14.5px/1.5 var(--font-label); min-width: 0; }
+.dl dd .u-num { font-size: 14px; }
+.dl__sub {
+  display: block;
+  margin-top: 3px;
   font-family: var(--font-num);
-  font-variant-numeric: tabular-nums;
   font-size: 12.5px;
-  letter-spacing: 0.08em;
-  color: var(--ink-3);
-}
-.row__title { font-size: 17px; line-height: 1.35; max-width: 66ch; text-wrap: pretty; }
-.row__statement { color: var(--ink-2); font-size: 15px; line-height: 1.5; max-width: 66ch; }
-.row__facts { margin-top: var(--s2); font-family: var(--font-label); font-size: 12.5px; color: var(--ink-2); }
-.row__facts-k { color: var(--ink-3); }
-.row__quote {
-  margin: 0;
-  padding-inline-start: var(--s3);
-  border-inline-start: 1px solid var(--rule);
-  max-width: 74ch;
   color: var(--ink-2);
-  font-size: 15px;
 }
-.row__quote cite { display: block; margin-top: var(--s1); color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; font-style: normal; }
-.row__quote mark { background: var(--hedge); color: var(--ink); padding: 0 2px; }
 
-.row__score { grid-area: score; }
-.score__value { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 500; line-height: 1.15; }
-.score__value.is-critical { color: var(--alarm); }
-.score__band { font-family: var(--font-label); font-size: 12.5px; letter-spacing: 0.06em; color: var(--ink-2); }
-.score__band.is-critical { color: var(--alarm); }
-.score__terms, .score__attention { margin-top: var(--s1); font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--ink-3); }
-.score__counts { display: grid; gap: var(--s1); }
-.score__counts div { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--ink-2); }
-.score__counts b { font-weight: 500; }
-
-.row__meta { grid-area: meta; display: grid; gap: var(--s2); min-width: 0; }
-.row__meta dt { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; }
-.row__meta dd { font-family: var(--font-label); font-size: 12.5px; color: var(--ink-2); line-height: 1.4; }
-/* Disagreement is carried by the word "disagree", not by colour. Alarm here
-   fired on every conflicted row and drowned out the marks that matter. */
-.row__meta dd.is-disagree { color: var(--ink-2); }
-.row__meta .u-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
-
-/* ── chips ──────────────────────────────────────────────────────────── */
-
-.chip {
-  display: inline-block;
-  padding: var(--s1) var(--s2);
-  font-family: var(--font-label);
-  font-size: 12.5px;
-  letter-spacing: 0.06em;
-  line-height: 1.35;
-  white-space: normal;
-}
-.chip--type { border: 1px solid var(--ink); color: var(--ink); }
-/* Border and text only. An assurance gap is never a filled mark. */
-.chip--type.is-gap { border-color: var(--alarm); color: var(--alarm); }
-/* Filled alarm. Exactly two strings ever use this: "Sources conflict", "Blocking". */
-.chip--alarm { background: var(--alarm); color: var(--on-alarm); border: 1px solid var(--alarm); }
-.chip--move { border: 1px solid var(--rule); color: var(--ink); }
-.chip--reclass { border: 1px solid var(--ink); background: var(--reclass); color: var(--ink); }
-.chip--note { border: 1px dashed var(--rule); color: var(--ink-3); }
-
-/* ── disclosure ─────────────────────────────────────────────────────── */
-
-.row__evidence { grid-area: evid; margin-top: var(--s3); }
-.row__evidence > summary {
-  display: inline-block;
-  min-height: 44px;
-  padding: var(--s3) 0;
-  color: var(--ink-2);
-  font-family: var(--font-label);
-  font-size: 12.5px;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-}
-.row__evidence > summary::marker { color: var(--ink-3); }
-
-.panel {
-  margin-top: var(--s3);
-  padding: var(--s4);
-  background: var(--paper-sunk);
-  border: 1px solid var(--rule-faint);
-}
-.panel + .panel { margin-top: var(--s3); }
-.panel__head { margin-bottom: var(--s3); }
-
-.src { padding: var(--s3) 0; border-top: 1px solid var(--rule-faint); }
-.src:first-of-type { border-top: 0; }
-.src__type { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; }
-.src__obs { margin-top: var(--s1); color: var(--ink-2); font-size: 15px; max-width: 66ch; }
-
-.lines { margin-top: var(--s2); display: grid; gap: var(--s1); }
-.lines__line { display: grid; grid-template-columns: 92px 1fr; gap: var(--s3); color: var(--ink-3); font-size: 15px; }
-.lines__line.is-cited { color: var(--ink); }
-.lines__stamp { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; padding-top: 3px; }
-.lines__who { font-family: var(--font-label); font-size: 12.5px; display: block; }
-.lines__text { max-width: 74ch; }
-.lines__text mark { background: var(--hedge); color: var(--ink); padding: 0 2px; }
-
-.fields { margin-top: var(--s2); display: grid; gap: var(--s2); }
-.fields__row { display: grid; grid-template-columns: 168px 1fr; gap: var(--s3); font-size: 15px; }
-.fields__k { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; }
-.fields__v { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 14px; }
-
-.conflict {
-  margin-top: var(--s3);
-  padding: var(--s3);
-  border: 1px solid var(--alarm);
-  color: var(--ink-2);
-  font-size: 15px;
-  max-width: 74ch;
-}
-.conflict b { color: var(--alarm); font-family: var(--font-label); font-size: 12.5px; letter-spacing: 0.06em; text-transform: uppercase; display: block; margin-bottom: var(--s1); }
-
-.sum { margin-top: var(--s2); font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 14px; }
-.sum__line { display: grid; grid-template-columns: minmax(0, 1fr) 78px 52px 80px; gap: var(--s2); padding: 3px 0; }
-.sum__line span:not(:first-child) { text-align: end; }
-.sum__rule { border-top: 1px solid var(--rule); margin-top: var(--s2); padding-top: var(--s2); }
-.sum__total { font-weight: 500; }
-
-/* Each factor expands to the anchor sentence it was scored against. The
-   native disclosure marker would sit on its own line above the row, so it is
-   replaced by a sign in front of the factor name. */
-.sum details > summary { cursor: pointer; color: inherit; font-family: var(--font-num); list-style: none; }
-.sum details > summary::-webkit-details-marker { display: none; }
-.sum details > summary .sum__line span:first-child::before { content: "+ "; color: var(--ink-3); }
-.sum details[open] > summary .sum__line span:first-child::before { content: "− "; color: var(--ink-3); }
-.sum__anchor { padding: var(--s1) 0 var(--s2); color: var(--ink-3); font-family: var(--font-text); font-size: 15px; max-width: 66ch; }
-.sum__note { margin-top: var(--s2); color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; }
-
-/* ── acceptance ─────────────────────────────────────────────────────── */
-
-.row__adjudicate {
-  grid-area: adj;
-  display: flex; flex-wrap: wrap; gap: var(--s2) var(--s3);
+/* Acceptance */
+.adj {
+  display: flex; flex-wrap: wrap; gap: 8px 12px;
   align-items: center;
-  margin: var(--s3) 0 0;
-  padding: var(--s3) 0 0;
-  border: 0; border-top: 1px solid var(--rule-faint);
+  margin: 0; padding: 14px 0 0;
+  border: 0; border-top: 1px solid var(--rule);
+  min-width: 0;
 }
-.row__adjudicate legend { padding: 0; }
-.adj__state { font-family: var(--font-label); font-size: 12.5px; letter-spacing: 0.06em; }
-/* Unaccepted is the default state of every row, so it is the norm and not an
-   exception. Alarm on a default trains the reader to ignore alarm; the
-   masthead count carries the signal instead. */
-.adj__state.is-unaccepted { color: var(--ink-3); }
-.adj__state.is-accepted, .adj__state.is-amended { color: var(--ink-2); }
-.adj__state.is-rejected { color: var(--ink-3); }
-.adj__buttons { display: flex; gap: var(--s2); }
+.adj legend { padding: 0; }
+.adj__btns { display: flex; gap: 8px; min-width: 0; }
 .adj__btn {
-  min-height: 44px; min-width: 72px;
-  padding: var(--s2) var(--s3);
-  border: 1px solid var(--rule);
-  font-family: var(--font-label); font-size: 12.5px;
+  min-height: 44px; min-width: 76px;
+  padding: 0 14px;
+  border: 1px solid var(--rule-firm);
+  font: 13px/1 var(--font-label);
   cursor: pointer;
 }
-.adj__btn[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
-.adj__note { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; max-width: 66ch; }
-.adj__note del { color: var(--ink-3); }
-
-.adj__form { flex: 1 1 100%; }
-.adj__label { display: block; margin-bottom: var(--s2); color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; max-width: 66ch; }
-.adj__row { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: stretch; }
+.adj__btn[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.adj__state { font: 13px/1.4 var(--font-label); color: var(--ink-2); }
+.adj__note { font: 13px/1.5 var(--font-label); color: var(--ink-2); flex: 1 1 100%; min-width: 0; }
+.adj__note del { color: var(--ink-2); }
+.adj__form { flex: 1 1 100%; min-width: 0; }
+.adj__label { display: block; margin-bottom: 6px; font: 12.5px/1.4 var(--font-label); color: var(--ink-2); }
+.adj__row { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .adj__input {
-  flex: 1 1 240px; min-width: 0; min-height: 44px;
-  padding: var(--s2) var(--s3);
+  flex: 1 1 200px; min-width: 0; min-height: 44px;
+  padding: 0 12px;
   border: 1px solid var(--ink);
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-label);
-  font-size: 14px;
+  font: 14px/1 var(--font-label);
 }
-.adj__input::placeholder { color: var(--ink-3); }
+.adj__input::placeholder { color: var(--ink-2); }
 
-/* ── omissions ──────────────────────────────────────────────────────── */
+/* ── the three closing disclosures ──────────────────────────────────── */
 
-/* The omissions are part of the record, so the strip stays attached to the
-   register on sunk paper and above the closing rule. The production notes
-   are not part of the record and sit below it. */
-.omissions {
-  margin-top: var(--s7);
-  padding: var(--s5);
-  background: var(--paper-sunk);
-  border: 1px solid var(--rule-faint);
+.notes { margin-top: 56px; border-top: 1px solid var(--ink); min-width: 0; }
+.note { border-bottom: 1px solid var(--rule); min-width: 0; }
+.note > summary {
+  padding: 16px 0;
+  font: 600 12.5px/1.3 var(--font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
 }
-.omissions__head {
-  display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4);
-  align-items: baseline;
-  padding-bottom: var(--s3);
-  border-bottom: 1px solid var(--ink);
-}
-.omissions__list { margin-top: var(--s3); display: grid; gap: var(--s3); }
-.omissions__item { padding-bottom: var(--s3); border-bottom: 1px solid var(--rule-faint); }
-.omissions__ref { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; letter-spacing: 0.08em; color: var(--ink-3); }
-.omissions__subject { font-size: 15px; }
-.omissions__reason { color: var(--ink-2); font-size: 15px; max-width: 66ch; }
+.note > summary::marker { color: var(--rule-firm); }
+.note__count { font-family: var(--font-num); color: var(--ink-2); }
+.note__body { display: grid; gap: 14px; padding: 4px 0 22px; min-width: 0; max-width: 100%; }
+.note__lede { font: 14.5px/1.6 var(--font-label); color: var(--ink-2); max-width: 62ch; }
 
-.dialog {
-  margin-top: var(--s3);
-  padding: var(--s4);
-  border: 1px solid var(--rule);
-  background: var(--paper-sunk);
-}
-.dialog table { width: 100%; border-collapse: collapse; font-size: 15px; }
-.dialog th, .dialog td { text-align: start; padding: var(--s2) var(--s3) var(--s2) 0; border-bottom: 1px solid var(--rule-faint); }
-.dialog th { color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; font-weight: 600; }
-.dialog td.u-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
-
-/* Closing rule. Everything below it is method, not record, and is set at the
-   register's own prose size rather than shrunk into a footnote. */
-.foot {
-  margin-top: var(--s8);
-  padding-top: var(--s5);
-  border-top: 3px double var(--ink);
+.cov { display: grid; gap: 2px; min-width: 0; }
+.cov__row {
   display: grid;
-  gap: var(--s5);
+  grid-template-columns: minmax(0, 1fr) 76px 62px 58px;
+  gap: 4px 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--rule);
+  font: 13.5px/1.4 var(--font-label);
+  min-width: 0;
 }
-.foot__block { display: grid; gap: var(--s2); }
-.foot p { font-size: 15px; line-height: 1.55; color: var(--ink-2); max-width: 66ch; text-wrap: pretty; }
+.cov__row.is-head { color: var(--ink-2); font-size: 12.5px; border-bottom-color: var(--rule-firm); }
+.cov__row .u-num { font-size: 13px; }
+.cov__row .is-under { color: var(--red); }
 
-/* ── mobile, < 900px ────────────────────────────────────────────────── */
+.omit { padding: 12px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 3px; min-width: 0; }
+.omit__ref { font: 12.5px/1.3 var(--font-num); letter-spacing: 0.06em; color: var(--ink-2); }
+.omit__subject { font: 14.5px/1.45 var(--font-label); }
+.omit__reason { font: 13.5px/1.55 var(--font-label); color: var(--ink-2); max-width: 62ch; }
 
-@media (max-width: 899px) {
-  .page { padding: var(--s5) var(--s4) var(--s7); }
+/* ── footer ─────────────────────────────────────────────────────────── */
 
-  .colheads { display: none; }
+.foot { margin-top: 40px; display: grid; gap: 10px; min-width: 0; }
+.foot p { font: 13px/1.6 var(--font-label); color: var(--ink-2); max-width: 62ch; }
 
-  .row {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "head" "title" "score" "meta" "quote" "evid" "adj";
-    padding: var(--s4);
-    row-gap: var(--s3);
-  }
-  .row.is-alarm { padding-inline-start: 13px; }
+/* ── phone ──────────────────────────────────────────────────────────── */
 
-  /* The column-one wrapper dissolves so its three children become grid items
-     of the row itself, and the quote can sit after the score and meta bands
-     in the collapse order title → score → meta → quote → controls. */
-  .row__main { display: contents; }
-  .row__head { grid-area: head; }
-  .row__title { grid-area: title; }
-  .row__quote { grid-area: quote; }
-
-  .row__meta { grid-template-columns: minmax(0, 1fr); }
-
-  .weekbar__set { width: 100%; }
-  .weekbar__btn { flex: 1 1 0; min-width: 0; padding: var(--s2); text-align: center; }
-  .coverage__more { margin-inline-start: 0; width: 100%; text-align: center; }
-
-  /* No table ever scrolls sideways. Below 700px every field table becomes
-     label/value pairs. */
-  .fields__row, .lines__line, .sum__line { grid-template-columns: minmax(0, 1fr); gap: var(--s1); }
-  .sum__line span:not(:first-child) { text-align: start; }
-  .dialog table, .dialog thead, .dialog tbody, .dialog tr, .dialog th, .dialog td { display: block; width: auto; }
-  .dialog thead { display: none; }
-  .dialog tr { padding: var(--s2) 0; border-bottom: 1px solid var(--rule-faint); }
-  .dialog td { border: 0; padding: 2px 0; }
-  .dialog td::before { content: attr(data-label) " "; color: var(--ink-3); font-family: var(--font-label); font-size: 12.5px; }
-
-  .adj__buttons { width: 100%; }
-  .adj__btn { flex: 1 1 0; }
+@media (max-width: 480px) {
+  .page { padding: 28px 16px 48px; }
+  .head__title { font-size: 28px; }
+  .row { grid-template-columns: 60px minmax(0, 1fr); column-gap: 12px; }
+  .row__num { font-size: 24px; }
+  .row__title { font-size: 17px; }
+  .detail { padding: 14px 0 16px 14px; }
+  .record__row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .cov__row { grid-template-columns: minmax(0, 1fr) 58px 46px; }
+  .cov__row > :nth-child(4) { display: none; }
+  .weeks__btn { flex: 1 1 0; min-width: 0; padding: 0 8px; text-align: center; }
+  /* Three buttons share the detail's width at 320px. Give each a floor wide
+     enough for its word and let the row wrap rather than break "Accept". */
+  .adj__btns { width: 100%; flex-wrap: wrap; }
+  .adj__btn { flex: 1 1 84px; min-width: 84px; white-space: nowrap; padding: 0 8px; }
 }
-
-/* ── motion ─────────────────────────────────────────────────────────── */
-
-.panel { animation: reveal 120ms ease-out; }
-@keyframes reveal { from { opacity: 0; } to { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-/* ── print ──────────────────────────────────────────────────────────── */
-
 @media print {
-  .weekbar, .adj__buttons, .coverage__more { display: none; }
+  .weeks, .adj__btns { display: none; }
   .row { break-inside: avoid; }
-  .row__evidence[open] > summary { list-style: none; }
 }
